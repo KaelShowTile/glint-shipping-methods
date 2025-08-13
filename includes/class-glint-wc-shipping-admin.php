@@ -1,0 +1,170 @@
+<?php
+class Glint_WC_Shipping_Admin {
+    public static function init() {
+        add_action('admin_menu', [__CLASS__, 'add_menu_page']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+        add_action('wp_ajax_glint_save_shipping_methods', [__CLASS__, 'save_shipping_methods']);
+    }
+
+    public static function add_menu_page() {
+        add_submenu_page(
+            'woocommerce',
+            'CHT Shipping Settings',
+            'CHT Shipping',
+            'manage_options',
+            'glint-wc-shipping',
+            [__CLASS__, 'render_settings_page']
+        );
+    }
+
+    public static function enqueue_assets($hook) {
+        if ($hook !== 'woocommerce_page_glint-wc-shipping') return;
+        
+        // Enqueue code editor for formulas
+        wp_enqueue_code_editor(['type' => 'javascript']);
+        wp_enqueue_script('wp-theme-plugin-editor');
+        wp_enqueue_style('wp-codemirror');
+        
+        // Custom assets
+        wp_enqueue_script(
+            'glint-shipping-admin',
+            GLINT_WC_SHIPPING_URL . 'assets/js/admin.js',
+            ['jquery', 'wp-util'],
+            GLINT_WC_SHIPPING_VERSION,
+            true
+        );
+        
+        wp_enqueue_style(
+            'glint-shipping-admin',
+            GLINT_WC_SHIPPING_URL . 'assets/css/admin.css',
+            [],
+            GLINT_WC_SHIPPING_VERSION
+        );
+
+        // Add nonce for AJAX security
+        wp_localize_script('glint-shipping-admin', 'glintShippingAdmin', [
+            'nonce' => wp_create_nonce('glint_shipping_nonce')
+        ]);
+    }
+
+    public static function render_settings_page() {
+        $methods = Glint_WC_Shipping_DB::get_all_methods();
+        ?>
+        <div class="wrap glint-shipping-settings">
+            <h1>Shipping Settings</h1>
+            <form id="glint-shipping-form">
+                <div id="shipping-methods-repeater">
+                    <?php foreach ($methods as $index => $method): ?>
+                        <div class="method-row" data-index="<?php echo $index; ?>">
+                            <div class="name-section">
+                                <h2>Setting Name:</h2>
+                                <input type="text" name="methods[<?php echo $index; ?>][setting_name]" 
+                                    value="<?php echo esc_attr($method['setting_name']); ?>" 
+                                    placeholder="e.g. Local Delivery">
+                            </div>
+                            
+                            <div class="postcode-section">
+                                <label>Postcodes (one per line):</label>
+                                <textarea name="methods[<?php echo $index; ?>][postcode]" rows="10"><?php echo esc_textarea($method['postcode']); ?></textarea>
+                            </div>
+                            
+                            <div class="method-section">
+                                <label>Shipping Method:</label>
+                                <select name="methods[<?php echo $index; ?>][method_name]" class="method-select">
+                                    <option value="custom_formula" <?php selected($method['method_name'], 'custom_formula'); ?>>Custom Formula</option>
+                                    <option value="mrl" <?php selected($method['method_name'], 'mrl'); ?>>MRL</option>
+                                </select>
+                            </div>
+                            
+                            <div class="settings-section section-<?php echo $index; ?>">
+                                <?php if ($method['method_name'] === 'custom_formula'): ?>
+                                    <label>Formula (JavaScript):</label>
+                                    <textarea name="methods[<?php echo $index; ?>][method_setting][formula]" class="formula-editor editor-<?php echo $index; ?>"><?php echo esc_textarea($method['method_setting']['formula'] ?? ''); ?></textarea>
+                                <?php elseif ($method['method_name'] === 'mrl'): ?>
+                                    <label>Account Name:</label>
+                                    <input type="text" name="methods[<?php echo $index; ?>][method_setting][account]" value="<?php echo esc_attr($method['method_setting']['account'] ?? ''); ?>">
+                                    
+                                    <label>Password:</label>
+                                    <input type="password" name="methods[<?php echo $index; ?>][method_setting][password]" value="<?php echo esc_attr($method['method_setting']['password'] ?? ''); ?>">
+                                <?php endif; ?>
+                            </div>
+                            
+                            <button type="button" class="remove-method">Remove</button>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                
+                <button type="button" id="add-new-method" class="button">Add New Method</button>
+                <button type="submit" id="save-methods" class="button-primary">Save Settings</button>
+            </form>
+            
+            <!-- Template for new method rows -->
+            <script type="text/template" id="method-row-template">
+                <div class="method-row" data-index="{{index}}">
+                    <div class="name-section">
+                        <h2>Setting Name:</h2>
+                        <input type="text" name="methods[{{index}}][setting_name]" 
+                            placeholder="e.g. Local Delivery">
+                    </div>
+                    
+                    <div class="postcode-section">
+                        <label>Postcodes (one per line):</label>
+                        <textarea name="methods[{{index}}][postcode]" rows="10"></textarea>
+                    </div>
+                    
+                    <div class="method-section">
+                        <label>Shipping Method:</label>
+                        <select name="methods[{{index}}][method_name]" class="method-select">
+                            <option value="custom_formula">Custom Formula</option>
+                            <option value="mrl">MRL</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-section section-{{index}}">
+                        <label>Formula (JavaScript):</label>
+                        <textarea name="methods[{{index}}][method_setting][formula]" class="formula-editor editor-{{index}}"></textarea>
+                    </div>
+                    
+                    <button type="button" class="remove-method">Remove</button>
+                </div>
+            </script>
+        </div>
+        <?php
+    }
+
+    public static function save_shipping_methods() {
+        check_ajax_referer('glint_shipping_nonce', 'security');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permission denied');
+        }
+        
+        $methods = isset($_POST['methods']) ? $_POST['methods'] : [];
+        $sanitized_methods = [];
+        
+        foreach ($methods as $method) {
+            $sanitized = [
+                'setting_name' => sanitize_text_field($method['setting_name']),
+                'postcode' => sanitize_textarea_field($method['postcode']),
+                'method_name' => sanitize_text_field($method['method_name']),
+                'method_setting' => []
+            ];
+            
+            if ($sanitized['method_name'] === 'custom_formula') {
+                $sanitized['method_setting']['formula'] = isset($method['method_setting']['formula']) ? 
+                    sanitize_textarea_field($method['method_setting']['formula']) : '';
+            } 
+            elseif ($sanitized['method_name'] === 'mrl') {
+                $sanitized['method_setting']['account'] = isset($method['method_setting']['account']) ? 
+                    sanitize_text_field($method['method_setting']['account']) : '';
+                $sanitized['method_setting']['password'] = isset($method['method_setting']['password']) ? 
+                    sanitize_text_field($method['method_setting']['password']) : '';
+            }
+            
+            $sanitized_methods[] = $sanitized;
+        }
+        
+        Glint_WC_Shipping_DB::save_methods($sanitized_methods);
+        wp_send_json_success('Settings saved');
+    }
+}
