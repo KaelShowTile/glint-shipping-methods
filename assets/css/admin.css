@@ -3,10 +3,14 @@
     font-weight: 500;
 }
 
+.wp-core-ui .glint-shipping-settings select{
+    min-width: 180px;
+}
+
 .glint-shipping-settings .method-row {
     background: #f9f9f9;
     border: 1px solid #ddd;
-    padding: 20px 15px 0;
+    padding: 20px 30px 10px;
     margin-bottom: 15px;
     position: relative;
 }
@@ -15,6 +19,16 @@
 .glint-shipping-settings .method-row .method-section,
 .glint-shipping-settings .method-row .settings-section {
     margin-bottom: 15px;
+}
+
+.settings-section .row{
+    width: 100%;
+    margin: 0 auto 15px;
+}
+
+.settings-section .row .method-option{
+    display: inline-block;
+    margin-right: 15px;
 }
 
 .glint-shipping-settings .method-row textarea {
@@ -32,17 +46,9 @@
     border: 1px solid #880000;
 }
 
-.glint-shipping-settings .settings-section label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
 .glint-shipping-settings .settings-section input[type="text"],
 .glint-shipping-settings .settings-section input[type="password"] {
-    width: 100%;
     max-width: 400px;
-    margin-bottom: 10px;
 }
 
 .CodeMirror {
@@ -60,3 +66,10 @@
     max-width: 400px;
 }
 
+.name-section h2{
+    display: inline-block;
+    margin: 12px 5px 12px 0;
+    text-transform: uppercase;
+    font-size: 1.25rem;
+    font-weight: 700;
+}

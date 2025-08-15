@@ -69,4 +69,25 @@ class Glint_WC_Shipping_DB {
         $table = self::get_table_name();
         $wpdb->query("DROP TABLE IF EXISTS $table");
     }
+
+    public static function get_method_by_id($method_id) {
+        global $wpdb;
+        $table = self::get_table_name();
+        $result = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE method_id = %d",
+            $method_id
+        ), ARRAY_A);
+        
+        if ($result) {
+            return [
+                'method_id' => $result['method_id'],
+                'setting_name' => $result['setting_name'],
+                'postcode' => $result['postcode'],
+                'method_name' => $result['method_name'],
+                'method_setting' => maybe_unserialize($result['method_setting'])
+            ];
+        }
+        
+        return null;
+    }
 }

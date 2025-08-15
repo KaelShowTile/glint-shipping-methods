@@ -29,10 +29,44 @@ jQuery(function($) {
             `;
         } else if (method === 'mrl') {
             settingsHtml = `
-                <label>Account Name:</label>
-                <input type="text" name="methods[${index}][method_setting][account]">
-                <label>Password:</label>
-                <input type="password" name="methods[${index}][method_setting][password]">
+                <div class="row">
+                    <div class="method-option">
+                        <label>Account Name:</label>
+                        <input type="text" name="methods[${index}][method_setting][account]">
+                    </div>
+                    <div class="method-option">
+                        <label>Password:</label>
+                        <input type="password" name="methods[${index}][method_setting][password]">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="method-option">
+                        <label>Tail Lift Pickup:</label>
+                        <select name="methods[${index}][method_setting][tailLiftPickup]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="method-option">
+                        <label>Tail Lift Delivery:</label>
+                        <select name="methods[${index}][method_setting][tailLiftDelivery]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="method-option">
+                        <label>Hand Unload:</label>
+                        <select name="methods[${index}][method_setting][handUnload]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        }else if (method === 'sydney_delivery') {
+            settingsHtml = `
+                <label>Price Per Pallet:</label>
+                <input type="text" name="methods[${index}][method_setting][price]">
             `;
         }
         $row.find(findClass).html(settingsHtml);

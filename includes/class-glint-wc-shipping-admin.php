@@ -57,7 +57,7 @@ class Glint_WC_Shipping_Admin {
                     <?php foreach ($methods as $index => $method): ?>
                         <div class="method-row" data-index="<?php echo $index; ?>">
                             <div class="name-section">
-                                <h2>Setting Name:</h2>
+                                <h2>Zone:</h2>
                                 <input type="text" name="methods[<?php echo $index; ?>][setting_name]" 
                                     value="<?php echo esc_attr($method['setting_name']); ?>" 
                                     placeholder="e.g. Local Delivery">
@@ -73,19 +73,63 @@ class Glint_WC_Shipping_Admin {
                                 <select name="methods[<?php echo $index; ?>][method_name]" class="method-select">
                                     <option value="custom_formula" <?php selected($method['method_name'], 'custom_formula'); ?>>Custom Formula</option>
                                     <option value="mrl" <?php selected($method['method_name'], 'mrl'); ?>>MRL</option>
+                                    <option value="sydney_delivery" <?php selected($method['method_name'], 'sydney_delivery'); ?>>Sydney Delivery</option>
                                 </select>
                             </div>
                             
                             <div class="settings-section section-<?php echo $index; ?>">
                                 <?php if ($method['method_name'] === 'custom_formula'): ?>
+                                    <!-- Formula -->
                                     <label>Formula (JavaScript):</label>
                                     <textarea name="methods[<?php echo $index; ?>][method_setting][formula]" class="formula-editor editor-<?php echo $index; ?>"><?php echo esc_textarea($method['method_setting']['formula'] ?? ''); ?></textarea>
+
                                 <?php elseif ($method['method_name'] === 'mrl'): ?>
-                                    <label>Account Name:</label>
-                                    <input type="text" name="methods[<?php echo $index; ?>][method_setting][account]" value="<?php echo esc_attr($method['method_setting']['account'] ?? ''); ?>">
-                                    
-                                    <label>Password:</label>
-                                    <input type="password" name="methods[<?php echo $index; ?>][method_setting][password]" value="<?php echo esc_attr($method['method_setting']['password'] ?? ''); ?>">
+                                    <div class="row">
+                                        <div class="method-option">
+                                            <!-- Account Name -->                                   
+                                            <label>Account Name:</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][account]" value="<?php echo esc_attr($method['method_setting']['account'] ?? ''); ?>">
+                                        </div>
+                                        <div class="method-option">
+                                        <!-- Password -->
+                                            <label>Password:</label>
+                                            <input type="password" name="methods[<?php echo $index; ?>][method_setting][password]" value="<?php echo esc_attr($method['method_setting']['password'] ?? ''); ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="method-option">
+                                            <!-- Tail Lift Pickup -->
+                                            <label>Tail Lift Pickup:</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][tailLiftPickup]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['tailLiftPickup'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['tailLiftPickup'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="method-option">
+                                            <!-- Tail Lift Pickup -->
+                                            <label>Tail Lift Delivery:</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][tailLiftDelivery]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['tailLiftDelivery'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['tailLiftDelivery'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="method-option">
+                                            <!-- Hand Unload -->
+                                            <label>Hand Unload:</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][handUnload]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['handUnload'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['handUnload'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                <?php elseif ($method['method_name'] === 'sydney_delivery'): ?>
+                                    <!-- Price/Pallet -->
+                                    <label>Price Per Pallet:</label>
+                                    <input type="text" name="methods[<?php echo $index; ?>][method_setting][price]" value="<?php echo esc_attr($method['method_setting']['price'] ?? ''); ?>">
                                 <?php endif; ?>
                             </div>
                             
@@ -117,6 +161,7 @@ class Glint_WC_Shipping_Admin {
                         <select name="methods[{{index}}][method_name]" class="method-select">
                             <option value="custom_formula">Custom Formula</option>
                             <option value="mrl">MRL</option>
+                            <option value="sydney_delivery">Sydney Delivery</option>
                         </select>
                     </div>
                     
@@ -159,6 +204,16 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['account']) : '';
                 $sanitized['method_setting']['password'] = isset($method['method_setting']['password']) ? 
                     sanitize_text_field($method['method_setting']['password']) : '';
+                $sanitized['method_setting']['tailLiftPickup'] = isset($method['method_setting']['tailLiftPickup']) ? 
+                    sanitize_text_field($method['method_setting']['tailLiftPickup']) : '';
+                $sanitized['method_setting']['tailLiftDelivery'] = isset($method['method_setting']['tailLiftDelivery']) ? 
+                    sanitize_text_field($method['method_setting']['tailLiftDelivery']) : '';
+                $sanitized['method_setting']['handUnload'] = isset($method['method_setting']['handUnload']) ? 
+                    sanitize_text_field($method['method_setting']['handUnload']) : '';
+            }
+            elseif ($sanitized['method_name'] === 'sydney_delivery') {
+                $sanitized['method_setting']['price'] = isset($method['method_setting']['price']) ? 
+                    sanitize_text_field($method['method_setting']['price']) : '';
             }
             
             $sanitized_methods[] = $sanitized;
