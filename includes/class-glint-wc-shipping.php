@@ -3,8 +3,10 @@ defined('ABSPATH') || exit;
 
 class Glint_WC_Shipping {
     public static function init() {
-        add_filter('woocommerce_shipping_methods', [__CLASS__, 'add_shipping_method']);
-        add_action('woocommerce_shipping_init', [__CLASS__, 'shipping_init']);
+        if (get_option('glint_shipping_enable', 'no') === 'yes') {
+            add_filter('woocommerce_shipping_methods', [__CLASS__, 'add_shipping_method']);
+            add_action('woocommerce_shipping_init', [__CLASS__, 'shipping_init']);
+        }
     }
     
     public static function shipping_init() {

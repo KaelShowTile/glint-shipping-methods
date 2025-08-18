@@ -73,3 +73,33 @@
     font-size: 1.25rem;
     font-weight: 700;
 }
+
+#glint-shipping-form .enable-section{
+    background: #0092d9;
+    padding: 30px 30px 25px;
+    border: 1px solid #ddd;
+}
+
+#glint-shipping-form .enable-section label{
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+#glint-shipping-form .enable-section input{
+    height: 1.25rem;
+    width: 1.25rem;
+    font-size: 1.25rem;
+    line-height: 1.25rem;
+}
+
+#glint-shipping-form .enable-section input::before{
+    height: 1.25em;
+    width: 1.25em;
+}
+
+#glint-shipping-form .enable-section .description{
+    margin-top: 5px;
+    color: #eee;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}

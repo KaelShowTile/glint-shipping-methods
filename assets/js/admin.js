@@ -109,6 +109,7 @@ jQuery(function($) {
         const data = {
             action: 'glint_save_shipping_methods',
             security: glintShippingAdmin.nonce,
+            enable_shipping: $('#glint-shipping-form input[name="enable_shipping"]').is(':checked') ? '1' : '0',
             methods: formData.methods || {}
         };
         

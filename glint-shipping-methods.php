@@ -29,8 +29,17 @@ add_action('woocommerce_loaded', function() {
     Glint_WC_Shipping::init();
 });
 
+// Add settings link to plugin actions
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
+    $settings_link = '<a href="' . admin_url('admin.php?page=glint-shipping-methods') . '">' . __('Settings') . '</a>';
+    array_unshift($links, $settings_link);
+    return $links;
+});
+
 // Activation/Deactivation hooks
 register_activation_hook(__FILE__, function() {
+    add_option('glint_shipping_enable', 'no');
+
     require_once GLINT_WC_SHIPPING_PATH . 'includes/class-glint-wc-shipping-db.php';
     Glint_WC_Shipping_DB::create_table();
     //Glint_WC_Shipping_DB::upgrade_table();

@@ -48,11 +48,22 @@ class Glint_WC_Shipping_Admin {
     }
 
     public static function render_settings_page() {
+        $is_enabled = get_option('glint_shipping_enable', 'no') === 'yes';
+
         $methods = Glint_WC_Shipping_DB::get_all_methods();
         ?>
         <div class="wrap glint-shipping-settings">
             <h1>Shipping Settings</h1>
             <form id="glint-shipping-form">
+
+                <div class="enable-section">
+                    <label>
+                        <input type="checkbox" name="enable_shipping" <?php checked($is_enabled, true); ?> value="1">
+                        Enable CHT Shipping Methods
+                    </label>
+                    <p class="description"> After enabled, setup the plugin shipping method for all avaliable shipping zone in WooCommerce shipping setting page.</p>
+                </div>
+
                 <div id="shipping-methods-repeater">
                     <?php foreach ($methods as $index => $method): ?>
                         <div class="method-row" data-index="<?php echo $index; ?>">
@@ -183,6 +194,10 @@ class Glint_WC_Shipping_Admin {
         if (!current_user_can('manage_options')) {
             wp_send_json_error('Permission denied');
         }
+
+        // Save enable/disable setting
+        $is_enabled = isset($_POST['enable_shipping']) && $_POST['enable_shipping'] === '1';
+        update_option('glint_shipping_enable', $is_enabled ? 'yes' : 'no');
         
         $methods = isset($_POST['methods']) ? $_POST['methods'] : [];
         $sanitized_methods = [];
