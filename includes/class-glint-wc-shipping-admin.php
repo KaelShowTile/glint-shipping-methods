@@ -135,6 +135,15 @@ class Glint_WC_Shipping_Admin {
                                                 <option value="no" <?php selected($method['method_setting']['handUnload'], 'no'); ?>>No</option>
                                             </select>
                                         </div>
+
+                                        <div class="method-option">
+                                            <!-- Customer can select -->
+                                            <label>Customer Can Choose Delivery Methods?</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][customer_choice_enabled]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['customer_choice_enabled'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['customer_choice_enabled'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
                                     </div>
 
                                 <?php elseif ($method['method_name'] === 'sydney_delivery'): ?>
@@ -225,6 +234,8 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['tailLiftDelivery']) : '';
                 $sanitized['method_setting']['handUnload'] = isset($method['method_setting']['handUnload']) ? 
                     sanitize_text_field($method['method_setting']['handUnload']) : '';
+                $sanitized['method_setting']['customerChoose'] = isset($method['method_setting']['customerChoose']) ? 
+                    sanitize_text_field($method['method_setting']['customerChoose']) : '';
             }
             elseif ($sanitized['method_name'] === 'sydney_delivery') {
                 $sanitized['method_setting']['price'] = isset($method['method_setting']['price']) ? 

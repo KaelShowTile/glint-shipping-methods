@@ -204,9 +204,161 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         return 0; // Fallback to free shipping
     }
     
+    private function get_customer_service_choices() {
+        $choices = [
+            'tailLiftPickup' => 'no',
+            'tailLiftDelivery' => 'no',
+            'handUnload' => 'no'
+        ];
+        
+        // Get from session if available
+        if (isset(WC()->session) && WC()->session->get('glint_mrl_services')) {
+            $session_choices = WC()->session->get('glint_mrl_services');
+            foreach ($choices as $key => $value) {
+                if (isset($session_choices[$key])) {
+                    $choices[$key] = $session_choices[$key];
+                }
+            }
+        }
+        
+        return $choices;
+    }
+
+    private function save_customer_service_choices() {
+        if (!isset(WC()->session) || !isset($_POST['post_data'])) {
+            return;
+        }
+        
+        parse_str($_POST['post_data'], $post_data);
+        
+        $services = [
+            'tailLiftPickup' => isset($post_data['glint_tailLiftPickup']) ? 'yes' : 'no',
+            'tailLiftDelivery' => isset($post_data['glint_tailLiftDelivery']) ? 'yes' : 'no',
+            'handUnload' => isset($post_data['glint_handUnload']) ? 'yes' : 'no'
+        ];
+        
+        WC()->session->set('glint_mrl_services', $services);
+    }
+
     private function calculate_mrl($method, $package) {
-        // Placeholder
-        error_log("Calculating MRL for method: " . $method['method_id']);
+        $this->save_customer_service_choices();
+
+        // Get service choices (customer or default)
+        $customer_choice_enabled = $method['method_setting']['customer_choice_enabled'] ?? 'no';
+        
+        if ($customer_choice_enabled === 'yes') {
+            $service_choices = $this->get_customer_service_choices();
+        } else {
+            $service_choices = [
+                'tailLiftPickup' => $method['method_setting']['tailLiftPickup'] ?? 'no',
+                'tailLiftDelivery' => $method['method_setting']['tailLiftDelivery'] ?? 'no',
+                'handUnload' => $method['method_setting']['handUnload'] ?? 'no'
+            ];
+        }
+
+        // If no items, return 0
+        if (empty($package['contents'])) {
+            return 0;
+        }
+        
+        // Get store address
+        $store_country = WC()->countries->get_base_country();
+        $store_postcode = WC()->countries->get_base_postcode();
+        $store_city = WC()->countries->get_base_city();
+        
+        // Get destination address
+        $destination = $package['destination'];
+        $to_suburb = $destination['city'];
+        $to_postcode = $destination['postcode'];
+        
+        // Prepare items array
+        $items = [];
+        foreach ($package['contents'] as $item) {
+            $product = $item['data'];
+            $qty = $item['quantity'];
+            
+            // Get dimensions
+            $dimensions = $this->get_product_dimensions($product);
+            $length = $this->convert_dimension_to_cm($dimensions['length'], $dimensions['dimension_unit']);
+            $width = $this->convert_dimension_to_cm($dimensions['width'], $dimensions['dimension_unit']);
+            $height = $this->convert_dimension_to_cm($dimensions['height'], $dimensions['dimension_unit']);
+            $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
+            
+            // Ensure minimum values
+            $items[] = [
+                'width' => max(1, $width),
+                'length' => max(1, $length),
+                'height' => max(1, $height),
+                'weight' => max(0.1, $weight),
+                'qty' => $qty
+            ];
+        }
+        
+        // Prepare services array
+        $services = [[
+            'account' => $method['method_setting']['account'] ?? '',
+            'service' => 'CPX' // Default service
+        ]];
+        
+        // Prepare API request
+        $api_url = 'https://api.ezishipping.com/customers/81/shipping/';
+        $request_body = [
+            'fromSuburb' => $store_city,
+            'fromPostcode' => $store_postcode,
+            'toSuburb' => $to_suburb,
+            'toPostcode' => $to_postcode,
+            'tailLiftPickup' => $this->convert_yesno($service_choices['tailLiftPickup']),
+            'tailLiftDelivery' => $this->convert_yesno($service_choices['tailLiftDelivery']),
+            'handUnload' => $this->convert_yesno($service_choices['handUnload']),
+            'services' => $services,
+            'items' => $items
+        ];
+        
+        // Make API request
+        $response = wp_remote_post($api_url, [
+            'body' => wp_json_encode($request_body),
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Basic ' . base64_encode('2656699showtile:Welcome123!')
+            ],
+            'timeout' => 15,
+            'sslverify' => false // Only for testing, remove in production
+        ]);
+        
+        // Handle response
+        if (is_wp_error($response)) {
+            error_log('MRL API Error: ' . $response->get_error_message());
+            return 0;
+        }
+        
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if ($status_code !== 200) {
+            $error_message = "MRL API Error: Status $status_code";
+            if (isset($data['error']['message'])) {
+                $error_message .= " - " . $data['error']['message'];
+            }
+            error_log($error_message);
+            return 0;
+        }
+        
+        if (!isset($data['success']) || !$data['success']) {
+            $error = $data['error'] ?? ['code' => 'unknown', 'message' => 'Unknown error'];
+            error_log("MRL API Error: {$error['code']} - {$error['message']}");
+            return 0;
+        }
+        
+        // Find the first valid quote
+        foreach ($data['response'] as $quote) {
+            if (isset($quote['TotalInc'])) {
+                return (float) $quote['TotalInc'];
+            }
+        }
+        
+        error_log('MRL API Error: No valid quote found');
+        return 0;
         return 20;
     }
     
@@ -254,6 +406,66 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         ];
         
         return $value * ($conversions[$from_unit] ?? 1);
+    }
+
+    public function display_service_options($method) {
+        // Only show for MRL method with customer choice enabled
+        if ($method->method_id !== 'glint_shipping') {
+            return;
+        }
+        
+        // Get method settings
+        $method_id = str_replace('glint_shipping_', '', $method->get_id());
+        $method_settings = Glint_WC_Shipping_DB::get_method_by_id($method_id);
+        
+        if (!$method_settings || $method_settings['method_name'] !== 'mrl') {
+            return;
+        }
+        
+        $customer_choice_enabled = $method_settings['method_setting']['customer_choice_enabled'] ?? 'no';
+        
+        if ($customer_choice_enabled !== 'yes') {
+            return;
+        }
+        
+        // Get current choices
+        $current_choices = $this->get_customer_service_choices();
+        
+        // Display service options
+        echo '<div class="glint-mrl-services">';
+        echo '<p>Additional Services</p>';
+        
+        $services = [
+            'tailLiftPickup' => [
+                'label' => 'Tail Lift Pickup',
+                'description' => 'Required if you need a tail lift for pickup'
+            ],
+            'tailLiftDelivery' => [
+                'label' => 'Tail Lift Delivery',
+                'description' => 'Required if you need a tail lift for delivery'
+            ],
+            'handUnload' => [
+                'label' => 'Hand Unload',
+                'description' => 'Required for manual unloading'
+            ]
+        ];
+        
+        foreach ($services as $key => $service) {
+            $checked = $current_choices[$key] === 'yes' ? 'checked' : '';
+            
+            echo '<div class="glint-service-option">';
+            echo '<div class="glint-service-label">';
+            echo '<span>' . esc_html($service['label']) . '</span>';
+            echo '<div class="glint-service-description">' . esc_html($service['description']) . '</div>';
+            echo '</div>';
+            echo '<label class="glint-service-toggle">';
+            echo '<input type="checkbox" name="glint_' . esc_attr($key) . '" ' . $checked . '>';
+            echo '<span class="glint-service-toggle-slider"></span>';
+            echo '</label>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
     }
 
 }

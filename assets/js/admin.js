@@ -61,6 +61,13 @@ jQuery(function($) {
                             <option value="no">No</option>
                         </select>
                     </div>
+                    <div class="method-option">
+                        <label>Customer Can Choose Delivery Methods?</label>
+                        <select name="methods[${index}][method_setting][customer_choice_enabled]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
                 </div>
             `;
         }else if (method === 'sydney_delivery') {
