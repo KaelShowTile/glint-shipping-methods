@@ -70,8 +70,10 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             }, $postcodes);
             
             if (in_array($postcode, $normalized_postcodes)) {
-                $found_method = $method;
-                break;
+                if($this->calculate_method_cost($found_method, $package) !== false){
+                    $found_method = $method;
+                    break;
+                }
             }
         }
 
