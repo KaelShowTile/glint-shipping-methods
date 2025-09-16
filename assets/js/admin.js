@@ -72,8 +72,17 @@ jQuery(function($) {
             `;
         }else if (method === 'sydney_delivery') {
             settingsHtml = `
-                <label>Price Per Pallet:</label>
-                <input type="text" name="methods[${index}][method_setting][price]">
+                <div class="glint-sydney-delivery-price-table">    
+                    <p>Rate by Weight:</p>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][1200kg]"><label>/1200kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][2400kg]"><label>/2400kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][3600kg]"><label>/3600kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][4800kg]"><label>/4800kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][6000kg]"><label>/6000kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][7200kg]"><label>/7200kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][8400kg]"><label>/8400kg</label></li>
+                    <li><label>$</label><input type="text" name=""methods[${index}][method_setting][9600kg-12000kg]"><label>/9600kg-12000kg</label></li>
+                </div>
             `;
         }else if(method === 'no_shipping_service'){
             settingsHtml = `
