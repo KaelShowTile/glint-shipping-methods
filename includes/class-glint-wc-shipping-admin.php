@@ -85,6 +85,7 @@ class Glint_WC_Shipping_Admin {
                                     <option value="custom_formula" <?php selected($method['method_name'], 'custom_formula'); ?>>Custom Formula</option>
                                     <option value="mrl" <?php selected($method['method_name'], 'mrl'); ?>>MRL</option>
                                     <option value="sydney_delivery" <?php selected($method['method_name'], 'sydney_delivery'); ?>>Sydney Delivery</option>
+                                    <option value="no_shipping_service" <?php selected($method['method_name'], 'no_shipping_service'); ?>>No Shipping Service Setting</option>
                                 </select>
                             </div>
                             
@@ -147,9 +148,54 @@ class Glint_WC_Shipping_Admin {
                                     </div>
 
                                 <?php elseif ($method['method_name'] === 'sydney_delivery'): ?>
-                                    <!-- Price/Pallet -->
-                                    <label>Price Per Pallet:</label>
-                                    <input type="text" name="methods[<?php echo $index; ?>][method_setting][price]" value="<?php echo esc_attr($method['method_setting']['price'] ?? ''); ?>">
+                                    <!-- Price basing on weight -->
+                                    <div class="glint-sydney-delivery-price-table">
+                                        <p>Rate by Weight:</p>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][1200kg]" value="<?php echo esc_attr($method['method_setting']['1200kg'] ?? ''); ?>">
+                                            <label>/1200kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][2400kg]" value="<?php echo esc_attr($method['method_setting']['2400kg'] ?? ''); ?>">
+                                            <label>/2400kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][3600kg]" value="<?php echo esc_attr($method['method_setting']['3600kg'] ?? ''); ?>">
+                                            <label>/3600kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][4800kg]" value="<?php echo esc_attr($method['method_setting']['4800kg'] ?? ''); ?>">
+                                            <label>/4800kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][6000kg]" value="<?php echo esc_attr($method['method_setting']['6000kg'] ?? ''); ?>">
+                                            <label>/6000kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][7200kg]" value="<?php echo esc_attr($method['method_setting']['7200kg'] ?? ''); ?>">
+                                            <label>/7200kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][8400kg]" value="<?php echo esc_attr($method['method_setting']['8400kg'] ?? ''); ?>">
+                                            <label>/8400kg</label>
+                                        </li>
+                                        <li>
+                                            <label>$</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][9600kg-12000kg]" value="<?php echo esc_attr($method['method_setting']['9600kg-12000kg'] ?? ''); ?>">
+                                            <label>/9600kg~12000kg</label>
+                                        </li>
+                                    </div>
+
+                                <?php elseif ($method['method_name'] === 'no_shipping_service'): ?>
+                                    <label>Message:</label>
+                                    <textarea name="methods[<?php echo $index; ?>][method_setting][no_shipping_method_notice]"><?php echo esc_textarea($method['method_setting']['no_shipping_method_notice'] ?? ''); ?></textarea>
                                 <?php endif; ?>
                             </div>
                             
@@ -182,6 +228,7 @@ class Glint_WC_Shipping_Admin {
                             <option value="custom_formula">Custom Formula</option>
                             <option value="mrl">MRL</option>
                             <option value="sydney_delivery">Sydney Delivery</option>
+                            <option value="no_shipping_service">No shipping Service Setting</option>
                         </select>
                     </div>
                     
@@ -234,12 +281,30 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['tailLiftDelivery']) : '';
                 $sanitized['method_setting']['handUnload'] = isset($method['method_setting']['handUnload']) ? 
                     sanitize_text_field($method['method_setting']['handUnload']) : '';
-                $sanitized['method_setting']['customerChoose'] = isset($method['method_setting']['customerChoose']) ? 
-                    sanitize_text_field($method['method_setting']['customerChoose']) : '';
+                $sanitized['method_setting']['customer_choice_enabled'] = isset($method['method_setting']['customer_choice_enabled']) ? 
+                    sanitize_text_field($method['method_setting']['customer_choice_enabled']) : '';
             }
             elseif ($sanitized['method_name'] === 'sydney_delivery') {
-                $sanitized['method_setting']['price'] = isset($method['method_setting']['price']) ? 
-                    sanitize_text_field($method['method_setting']['price']) : '';
+                $sanitized['method_setting']['1200kg'] = isset($method['method_setting']['1200kg']) ? 
+                    sanitize_text_field($method['method_setting']['1200kg']) : '';
+                $sanitized['method_setting']['2400kg'] = isset($method['method_setting']['2400kg']) ? 
+                    sanitize_text_field($method['method_setting']['2400kg']) : '';
+                $sanitized['method_setting']['3600kg'] = isset($method['method_setting']['3600kg']) ? 
+                    sanitize_text_field($method['method_setting']['3600kg']) : '';
+                $sanitized['method_setting']['4800kg'] = isset($method['method_setting']['4800kg']) ? 
+                    sanitize_text_field($method['method_setting']['4800kg']) : '';
+                $sanitized['method_setting']['6000kg'] = isset($method['method_setting']['6000kg']) ? 
+                    sanitize_text_field($method['method_setting']['6000kg']) : '';
+                $sanitized['method_setting']['7200kg'] = isset($method['method_setting']['7200kg']) ? 
+                    sanitize_text_field($method['method_setting']['7200kg']) : '';
+                $sanitized['method_setting']['8400kg'] = isset($method['method_setting']['8400kg']) ? 
+                    sanitize_text_field($method['method_setting']['8400kg']) : '';
+                $sanitized['method_setting']['9600kg-12000kg'] = isset($method['method_setting']['9600kg-12000kg']) ? 
+                    sanitize_text_field($method['method_setting']['9600kg-12000kg']) : '';
+            }
+            elseif ($sanitized['method_name'] === 'no_shipping_service'){
+                $sanitized['method_setting']['no_shipping_method_notice'] = isset($method['method_setting']['no_shipping_method_notice']) ? 
+                    sanitize_text_field($method['method_setting']['no_shipping_method_notice']) : '';
             }
             
             $sanitized_methods[] = $sanitized;

@@ -70,3 +70,7 @@ input:checked + .glint-service-toggle-slider:before {
     font-weight: bold;
     color: #3D9CD2;
 }
+
+input[value="glint_shipping_no_shipping_service"] ~ .wc-block-components-radio-control__option-layout .wc-block-checkout__shipping-option--free {
+    display: none;
+}

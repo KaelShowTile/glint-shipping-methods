@@ -75,7 +75,13 @@ jQuery(function($) {
                 <label>Price Per Pallet:</label>
                 <input type="text" name="methods[${index}][method_setting][price]">
             `;
+        }else if(method === 'no_shipping_service'){
+            settingsHtml = `
+                <label>Message:</label>
+                <textarea name="methods[${index}][method_setting][no_shipping_method_notice]">
+            `;
         }
+
         $row.find(findClass).html(settingsHtml);
         initCodeEditors(index);
     });

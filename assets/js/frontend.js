@@ -17,4 +17,17 @@ jQuery(function($) {
     $(document).on('updated_checkout', function() {
         initServiceToggles();
     });
+
+
+    //changing the text of "Free" on subtotal if the shipping fee is 0
+    var checkShippingFee = setInterval(function() {
+        var shippingFeeElement = $('.wc-block-components-totals-item__value strong');
+        if (shippingFeeElement.length && shippingFeeElement.text().trim() === "Free") {
+            shippingFeeElement.text("");
+            clearInterval(checkShippingFee); // Stop the interval once done
+        }
+    }, 200); 
+
+
 });
+

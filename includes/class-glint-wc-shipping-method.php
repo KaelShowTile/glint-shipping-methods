@@ -46,7 +46,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     public function calculate_shipping($package = []) {
         // Check if postcode exists
         if (empty($package['destination']['postcode'])) {
-            error_log("Can't dind postcode or destination");
             return;
         }
         
@@ -54,9 +53,17 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $methods = Glint_WC_Shipping_DB::get_all_methods();
         
         $found_method = null;
+        $no_service_method = null;
         
         // Find matching method by postcode
         foreach ($methods as $method) {
+            // First, check if this is the no_shipping_service method
+            if ($method['method_name'] === 'no_shipping_service') {
+                $no_service_method = $method;
+                continue;
+            }
+            
+            // Then check for postcode matches in regular methods
             $postcodes = array_map('trim', explode("\n", $method['postcode']));
             $normalized_postcodes = array_map(function($pc) {
                 return strtoupper(str_replace(' ', '', $pc));
@@ -67,12 +74,30 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 break;
             }
         }
+
+        // If no regular method found, use the no_shipping_service method
+        if (!$found_method && $no_service_method) {
+            // Add a special rate with the custom message
+            $rate = [
+                'id' => $this->id . '_no_shipping_service',
+                'label' => $no_service_method['method_setting']['no_shipping_method_notice'], 
+                //'cost' => 0, // Or you could set a special cost if needed
+                'package' => $package,
+                'meta_data' => [
+                    'no_shipping_service' => true, // Custom flag for identification
+                    'custom_label' => $no_service_method['method_setting']['no_shipping_method_notice']
+                ]
+            ];
+            
+            $this->add_rate($rate);
+            return;
+        }
         
         // If no method found, don't add a rate
         if (!$found_method) {
             return;
         }
-        
+
         // Calculate shipping based on method type
         $cost = $this->calculate_method_cost($found_method, $package);
         
@@ -81,12 +106,13 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'id' => $this->id . '_' . $found_method['method_id'],
             'label' => $found_method['setting_name'],
             'cost' => $cost,
-            'calc_tax' => 'per_item',
+            //'calc_tax' => 'per_item',
             'package' => $package,
         ];
         
         $this->add_rate($rate);
     }
+
     
     private function calculate_method_cost($method, $package) {
         switch ($method['method_name']) {
@@ -96,8 +122,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 return $this->calculate_mrl($method, $package);
             case 'sydney_delivery':
                 return $this->calculate_sydney_delivery($method, $package);
-            default:
-                return 10; // Default cost
         }
     }
     
@@ -363,9 +387,46 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
     
     private function calculate_sydney_delivery($method, $package) {
-        // Placeholder
-        error_log("Calculating Sydney Delivery for method: " . $method['method_id']);
-        return 30;
+        $destination = $package['destination'];
+        $to_postcode = $destination['postcode'];
+        $total_weight = 0;
+
+        foreach ($package['contents'] as $item) {
+            $product = $item['data'];
+            $dimensions = $this->get_product_dimensions($product);
+            $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
+
+            //if forget to setup weight, use 1200kg as default
+            if(!$weight || $weight==0){
+                $weight = 1200;
+            }
+            
+            //convert into kg
+            $weight = wc_get_weight((float) $product->get_weight(), 'kg');
+            $total_weight = $total_weight + $weight;
+        }
+
+        //formula
+        if($method['method_setting']['1200kg'] && $total_weight <= 1200){
+            return $method['method_setting']['1200kg'];
+        }elseif($method['method_setting']['2400kg'] && $total_weight <= 2400){
+            return $method['method_setting']['2400kg'];
+        }elseif($method['method_setting']['3600kg'] && $total_weight <= 3600){
+            return $method['method_setting']['3600kg'];
+        }elseif($method['method_setting']['4800kg'] && $total_weight <= 2400){
+            return $method['method_setting']['4800kg'];
+        }elseif($method['method_setting']['6000kg'] && $total_weight <= 2400){
+            return $method['method_setting']['6000kg'];
+        }elseif($method['method_setting']['7200kg'] && $total_weight <= 2400){
+            return $method['method_setting']['7200kg'];
+        }elseif($method['method_setting']['8400kg'] && $total_weight <= 2400){
+            return $method['method_setting']['8400kg'];
+        }elseif($method['method_setting']['12000kg'] && $total_weight <= 2400){
+            return $method['method_setting']['12000kg'];
+        }else{
+            //other condition
+            return false; 
+        }
     }
 
     // Convert yes/no to Y/N
