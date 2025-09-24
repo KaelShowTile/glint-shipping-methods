@@ -51,7 +51,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         
         $postcode = strtoupper(str_replace(' ', '', $package['destination']['postcode']));
         $methods = Glint_WC_Shipping_DB::get_all_methods();
-        
+
         $found_method = null;
         $no_service_method = null;
         
@@ -65,65 +65,71 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             
             // Then check for postcode matches in regular methods
             $postcodes = array_map('trim', explode("\n", $method['postcode']));
+            
             $normalized_postcodes = array_map(function($pc) {
                 return strtoupper(str_replace(' ', '', $pc));
             }, $postcodes);
-            
+
             if (in_array($postcode, $normalized_postcodes)) {
-                if($this->calculate_method_cost($found_method, $package) !== false){
-                    $found_method = $method;
-                    break;
-                }
+                $found_method = $method;
+                break;
             }
         }
 
+        // Calculate shipping based on method type
+        $cost = $this->calculate_method_cost($found_method, $package);
+
+        if($cost !== false){
+            // Add shipping rate
+            $rate = [
+                'id' => $this->id . '_' . $found_method['method_id'],
+                'label' => $found_method['setting_name'],
+                'cost' => $cost,
+                //'calc_tax' => 'per_item',
+                'package' => $package,
+            ];
+            
+            $this->add_rate($rate);
+        }else{
+            $found_method = null;
+        }
+
         // If no regular method found, use the no_shipping_service method
-        if (!$found_method && $no_service_method) {
-            // Add a special rate with the custom message
+        if (!$found_method) {
+            //deflaut message showing on checkout page
+            $no_shipping_method_message = "Please contact us for a quote.";
+            //if has setup no service method
+            if($no_service_method){
+                $no_shipping_method_message = $no_service_method['method_setting']['no_shipping_method_notice'];
+            }
+
             $rate = [
                 'id' => $this->id . '_no_shipping_service',
-                'label' => $no_service_method['method_setting']['no_shipping_method_notice'], 
+                'label' => $no_shipping_method_message, 
                 //'cost' => 0, // Or you could set a special cost if needed
                 'package' => $package,
                 'meta_data' => [
                     'no_shipping_service' => true, // Custom flag for identification
-                    'custom_label' => $no_service_method['method_setting']['no_shipping_method_notice']
+                    'custom_label' => $no_shipping_method_message
                 ]
             ];
             
             $this->add_rate($rate);
             return;
         }
-        
-        // If no method found, don't add a rate
-        if (!$found_method) {
-            return;
-        }
 
-        // Calculate shipping based on method type
-        $cost = $this->calculate_method_cost($found_method, $package);
-        
-        // Add shipping rate
-        $rate = [
-            'id' => $this->id . '_' . $found_method['method_id'],
-            'label' => $found_method['setting_name'],
-            'cost' => $cost,
-            //'calc_tax' => 'per_item',
-            'package' => $package,
-        ];
-        
-        $this->add_rate($rate);
     }
 
     
     private function calculate_method_cost($method, $package) {
-        switch ($method['method_name']) {
-            case 'custom_formula':
-                return $this->calculate_custom_formula($method, $package);
-            case 'mrl':
-                return $this->calculate_mrl($method, $package);
-            case 'sydney_delivery':
-                return $this->calculate_sydney_delivery($method, $package);
+        if($method['method_name'] == 'custom_formula'){
+            return $this->calculate_custom_formula($method, $package);
+        }elseif($method['method_name'] == 'mrl'){
+            return $this->calculate_mrl($method, $package);
+        }elseif($method['method_name'] == 'sydney_delivery'){
+            return $this->calculate_sydney_delivery($method, $package);
+        }else{
+            return $this->no_service_available();
         }
     }
     
@@ -395,6 +401,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
+            $qty = $item['quantity'];
             $dimensions = $this->get_product_dimensions($product);
             $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
 
@@ -405,6 +412,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             
             //convert into kg
             $weight = wc_get_weight((float) $product->get_weight(), 'kg');
+            $weight = $weight * $qty;
             $total_weight = $total_weight + $weight;
         }
 
@@ -415,20 +423,23 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             return $method['method_setting']['2400kg'];
         }elseif($method['method_setting']['3600kg'] && $total_weight <= 3600){
             return $method['method_setting']['3600kg'];
-        }elseif($method['method_setting']['4800kg'] && $total_weight <= 2400){
+        }elseif($method['method_setting']['4800kg'] && $total_weight <= 4800){
             return $method['method_setting']['4800kg'];
-        }elseif($method['method_setting']['6000kg'] && $total_weight <= 2400){
+        }elseif($method['method_setting']['6000kg'] && $total_weight <= 6000){
             return $method['method_setting']['6000kg'];
-        }elseif($method['method_setting']['7200kg'] && $total_weight <= 2400){
+        }elseif($method['method_setting']['7200kg'] && $total_weight <= 7200){
             return $method['method_setting']['7200kg'];
-        }elseif($method['method_setting']['8400kg'] && $total_weight <= 2400){
+        }elseif($method['method_setting']['8400kg'] && $total_weight <= 8400){
             return $method['method_setting']['8400kg'];
-        }elseif($method['method_setting']['12000kg'] && $total_weight <= 2400){
-            return $method['method_setting']['12000kg'];
+        }elseif($method['method_setting']['9600kg-12000kg'] && $total_weight <= 12000){
+            return $method['method_setting']['9600kg-12000kg'];
         }else{
-            //other condition
             return false; 
         }
+    }
+
+    private function no_service_available(){
+
     }
 
     // Convert yes/no to Y/N
