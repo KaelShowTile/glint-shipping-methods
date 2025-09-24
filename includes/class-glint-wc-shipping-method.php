@@ -53,6 +53,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $methods = Glint_WC_Shipping_DB::get_all_methods();
 
         $found_method = null;
+        $found_method_name = null;
         $no_service_method = null;
         
         // Find matching method by postcode
@@ -60,6 +61,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             // First, check if this is the no_shipping_service method
             if ($method['method_name'] === 'no_shipping_service') {
                 $no_service_method = $method;
+                $found_method_name = 'no_shipping_service';
                 continue;
             }
             
@@ -72,26 +74,29 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
             if (in_array($postcode, $normalized_postcodes)) {
                 $found_method = $method;
+                $found_method_name = $method['method_name'];
                 break;
             }
         }
 
-        // Calculate shipping based on method type
-        $cost = $this->calculate_method_cost($found_method, $package);
+        if($found_method){
+            // Calculate shipping based on method type
+            $cost = $this->calculate_method_cost($found_method_name, $found_method, $package);
 
-        if($cost !== false){
-            // Add shipping rate
-            $rate = [
-                'id' => $this->id . '_' . $found_method['method_id'],
-                'label' => $found_method['setting_name'],
-                'cost' => $cost,
-                //'calc_tax' => 'per_item',
-                'package' => $package,
-            ];
-            
-            $this->add_rate($rate);
-        }else{
-            $found_method = null;
+            if($cost !== false){
+                // Add shipping rate
+                $rate = [
+                    'id' => $this->id . '_' . $found_method['method_id'],
+                    'label' => $found_method['setting_name'],
+                    'cost' => $cost,
+                    //'calc_tax' => 'per_item',
+                    'package' => $package,
+                ];
+                
+                $this->add_rate($rate);
+            }else{
+                $found_method = null;
+            }
         }
 
         // If no regular method found, use the no_shipping_service method
@@ -121,12 +126,12 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
 
     
-    private function calculate_method_cost($method, $package) {
-        if($method['method_name'] == 'custom_formula'){
+    private function calculate_method_cost($method_name, $method, $package) {
+        if($method_name == 'custom_formula'){
             return $this->calculate_custom_formula($method, $package);
-        }elseif($method['method_name'] == 'mrl'){
+        }elseif($method_name == 'mrl'){
             return $this->calculate_mrl($method, $package);
-        }elseif($method['method_name'] == 'sydney_delivery'){
+        }elseif($method_name == 'sydney_delivery'){
             return $this->calculate_sydney_delivery($method, $package);
         }else{
             return $this->no_service_available();
