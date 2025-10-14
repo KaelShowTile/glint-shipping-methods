@@ -31,12 +31,16 @@ jQuery(function($) {
             settingsHtml = `
                 <div class="row">
                     <div class="method-option">
-                        <label>Account Name:</label>
+                        <label>API Username:</label>
                         <input type="text" name="methods[${index}][method_setting][account]">
                     </div>
                     <div class="method-option">
                         <label>Password:</label>
                         <input type="password" name="methods[${index}][method_setting][password]">
+                    </div>
+                    <div class="method-option">
+                        <label>Account Number:</label>
+                        <input type="text" name="methods[${index}][method_setting][accountNo]">
                     </div>
                 </div>
                 <div class="row">
@@ -57,6 +61,20 @@ jQuery(function($) {
                     <div class="method-option">
                         <label>Hand Unload:</label>
                         <select name="methods[${index}][method_setting][handUnload]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="method-option">
+                        <label>Residential Pickup:</label>
+                        <select name="methods[${index}][method_setting][residentialPickup]" class="setting-select">
+                            <option value="yes" selected>Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div class="method-option">
+                        <label>Residential Delivery:</label>
+                        <select name="methods[${index}][method_setting][residentialDelivery]" class="setting-select">
                             <option value="yes" selected>Yes</option>
                             <option value="no">No</option>
                         </select>

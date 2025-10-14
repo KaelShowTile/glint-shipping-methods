@@ -55,6 +55,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $found_method = null;
         $found_method_name = null;
         $no_service_method = null;
+        $method_rest_area = null;
         
         // Find matching method by postcode
         foreach ($methods as $method) {
@@ -71,12 +72,21 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             $normalized_postcodes = array_map(function($pc) {
                 return strtoupper(str_replace(' ', '', $pc));
             }, $postcodes);
+            
+            if(in_array('REST', $normalized_postcodes)){
+                $method_rest_area = $method;
+            }
 
             if (in_array($postcode, $normalized_postcodes)) {
                 $found_method = $method;
                 $found_method_name = $method['method_name'];
                 break;
             }
+        }
+
+        if(!$found_method && $method_rest_area){
+            $found_method = $method_rest_area;
+            $found_method_name = $method_rest_area['method_name'];
         }
 
         if($found_method){
@@ -139,105 +149,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
     
     private function calculate_custom_formula($method, $package) {
-        // Get store address
-        $store_country = WC()->countries->get_base_country();
-        $store_postcode = WC()->countries->get_base_postcode();
-        $store_city = WC()->countries->get_base_city();
         
-        // Get destination address
-        $destination = $package['destination'];
-        $to_suburb = $destination['city'];
-        $to_postcode = $destination['postcode'];
-        
-        // Prepare items array
-        $items = [];
-        foreach ($package['contents'] as $item) {
-            $product = $item['data'];
-            $qty = $item['quantity'];
-            $dimensions = $this->get_product_dimensions($product);
-            $length = $this->convert_dimension_to_cm($dimensions['length'], $dimensions['dimension_unit']);
-            $width = $this->convert_dimension_to_cm($dimensions['width'], $dimensions['dimension_unit']);
-            $height = $this->convert_dimension_to_cm($dimensions['height'], $dimensions['dimension_unit']);
-            $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
-            
-            // Get dimensions - convert to cm if needed
-            $length = wc_get_dimension((float) $product->get_length(), 'cm');
-            $width = wc_get_dimension((float) $product->get_width(), 'cm');
-            $height = wc_get_dimension((float) $product->get_height(), 'cm');
-            $weight = wc_get_weight((float) $product->get_weight(), 'kg');
-            
-            $items[] = [
-                'width' => max(1, $width),  // Ensure minimum 1cm
-                'length' => max(1, $length),
-                'height' => max(1, $height),
-                'weight' => max(0.1, $weight), // Ensure minimum 0.1kg
-                'qty' => $qty
-            ];
-        }
-        
-        // Prepare services array
-        $services = [[
-            'account' => $method['method_setting']['account'] ?? '',
-            'service' => 'CPX' // Default service
-        ]];
-        
-        // Prepare API request
-        $api_url = 'https://api.ezishipping.com/customers/81/shipping/';
-        $request_body = [
-            'fromSuburb' => $store_city,
-            'fromPostcode' => $store_postcode,
-            'toSuburb' => $to_suburb,
-            'toPostcode' => $to_postcode,
-            'tailLiftPickup' => $this->convert_yesno($method['method_setting']['tailLiftPickup'] ?? 'no'),
-            'tailLiftDelivery' => $this->convert_yesno($method['method_setting']['tailLiftDelivery'] ?? 'no'),
-            'handUnload' => $this->convert_yesno($method['method_setting']['handUnload'] ?? 'no'),
-            'services' => $services,
-            'items' => $items
-        ];
-        
-        // Make API request
-        $response = wp_remote_post($api_url, [
-            'body' => wp_json_encode($request_body),
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode('2656699showtile:Welcome123!')
-            ],
-            'timeout' => 10
-        ]);
-        
-        // Handle response
-        if (is_wp_error($response)) {
-            error_log('MRL API Error: ' . $response->get_error_message());
-            return 0; // Fallback to free shipping on error
-        }
-        
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        if ($status_code !== 200) {
-            $error_message = "MRL API Error: Status $status_code";
-            if (isset($data['error']['message'])) {
-                $error_message .= " - " . $data['error']['message'];
-            }
-            error_log($error_message);
-            return 0;
-        }
-
-        if (!isset($data['success']) || !$data['success']) {
-            $error = $data['error'] ?? ['code' => 'unknown', 'message' => 'Unknown error'];
-            error_log("MRL API Error: {$error['code']} - {$error['message']}");
-            return 0;
-        }
-        
-        // Find the first valid quote
-        foreach ($data['response'] as $quote) {
-            if (isset($quote['TotalInc'])) {
-                return (float) $quote['TotalInc'];
-            }
-        }
-        
-        error_log('MRL API Error: No valid quote found');
         return 0; // Fallback to free shipping
     }
     
@@ -245,7 +157,9 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $choices = [
             'tailLiftPickup' => 'no',
             'tailLiftDelivery' => 'no',
-            'handUnload' => 'no'
+            'handUnload' => 'no',
+            'residentialPickup' => 'no',
+            'residentialDelivery' => 'no'
         ];
         
         // Get from session if available
@@ -271,7 +185,9 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $services = [
             'tailLiftPickup' => isset($post_data['glint_tailLiftPickup']) ? 'yes' : 'no',
             'tailLiftDelivery' => isset($post_data['glint_tailLiftDelivery']) ? 'yes' : 'no',
-            'handUnload' => isset($post_data['glint_handUnload']) ? 'yes' : 'no'
+            'handUnload' => isset($post_data['glint_handUnload']) ? 'yes' : 'no',
+            'residentialPickup' => isset($post_data['glint_residentialPickup']) ? 'yes' : 'no',
+            'residentialDelivery' => isset($post_data['glint_residentialDelivery']) ? 'yes' : 'no'
         ];
         
         WC()->session->set('glint_mrl_services', $services);
@@ -289,7 +205,9 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             $service_choices = [
                 'tailLiftPickup' => $method['method_setting']['tailLiftPickup'] ?? 'no',
                 'tailLiftDelivery' => $method['method_setting']['tailLiftDelivery'] ?? 'no',
-                'handUnload' => $method['method_setting']['handUnload'] ?? 'no'
+                'handUnload' => $method['method_setting']['handUnload'] ?? 'no',
+                'residentialPickup' => $method['method_setting']['residentialPickup'] ?? 'no',
+                'residentialDelivery' => $method['method_setting']['residentialDelivery'] ?? 'no'
             ];
         }
 
@@ -308,7 +226,10 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $to_suburb = $destination['city'];
         $to_postcode = $destination['postcode'];
         
-        // Prepare items array
+        // CHT way, convert items to pallet for delivery
+        $items = $this->convert_to_pallet($package);
+        
+        /* Prepare items array, default way, get items from order
         $items = [];
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
@@ -329,16 +250,21 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 'weight' => max(0.1, $weight),
                 'qty' => $qty
             ];
-        }
-        
-        // Prepare services array
-        $services = [[
-            'account' => $method['method_setting']['account'] ?? '',
-            'service' => 'CPX' // Default service
-        ]];
+        }*/
         
         // Prepare API request
-        $api_url = 'https://api.ezishipping.com/customers/81/shipping/';
+        $api_url = 'https://api.sampsonexpress.com.au/v3.6/customers/1941/shipping/';
+
+        $request_header = [
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Basic ' . base64_encode($method['method_setting']['account'] . ':' . $method['method_setting']['password'])
+        ];
+
+        $services = [[
+            'account' => $method['method_setting']['accountNo'] ?? '',
+            'service' => 'EXPKG' 
+        ]];
+
         $request_body = [
             'fromSuburb' => $store_city,
             'fromPostcode' => $store_postcode,
@@ -347,21 +273,23 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'tailLiftPickup' => $this->convert_yesno($service_choices['tailLiftPickup']),
             'tailLiftDelivery' => $this->convert_yesno($service_choices['tailLiftDelivery']),
             'handUnload' => $this->convert_yesno($service_choices['handUnload']),
+            'residentialPickup' => $this->convert_yesno($service_choices['residentialPickup']),
+            'residentialDelivery' => $this->convert_yesno($service_choices['residentialDelivery']),
             'services' => $services,
             'items' => $items
         ];
+
+        $args = array(
+            'method' => 'POST',
+            'headers' => $request_header,
+            'body' => wp_json_encode($request_body),
+            'timeout' => 15,
+            'sslverify' => false
+        );
         
         // Make API request
-        $response = wp_remote_post($api_url, [
-            'body' => wp_json_encode($request_body),
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Basic ' . base64_encode('2656699showtile:Welcome123!')
-            ],
-            'timeout' => 15,
-            'sslverify' => false // Only for testing, remove in production
-        ]);
-        
+        $response = wp_remote_post($api_url, $args);
+
         // Handle response
         if (is_wp_error($response)) {
             error_log('MRL API Error: ' . $response->get_error_message());
@@ -371,6 +299,8 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
+
+        //var_dump($data);
         
         if ($status_code !== 200) {
             $error_message = "MRL API Error: Status $status_code";
@@ -390,13 +320,15 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         // Find the first valid quote
         foreach ($data['response'] as $quote) {
             if (isset($quote['TotalInc'])) {
-                return (float) $quote['TotalInc'];
+                if($quote['TotalInc'] !== 'NA'){
+                    return (float) $quote['TotalInc'];
+                }else{
+                    return 0;
+                }  
             }
         }
         
-        error_log('MRL API Error: No valid quote found');
         return 0;
-        return 20;
     }
     
     private function calculate_sydney_delivery($method, $package) {
@@ -487,6 +419,63 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         return $value * ($conversions[$from_unit] ?? 1);
     }
 
+    //cht only
+    public function convert_to_pallet($package){
+        $pallet_width = 120;
+        $pallet_length = 120;
+        $pallet_height = 85;
+        $pallet_weight = 800;
+        $pallet_box_weight = 50;
+        $total_weight = 0;
+        // output array
+        $items = [];
+
+        foreach ($package['contents'] as $item) {
+            $product = $item['data'];
+            $qty = $item['quantity'];
+            $dimensions = $this->get_product_dimensions($product);
+            $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
+
+            //if forget to setup weight, use 800kg/1 pallet's weight as default
+            if(!$weight || $weight==0){
+                $weight = 800;
+            }
+            
+            //convert into kg
+            $weight = wc_get_weight((float) $product->get_weight(), 'kg');
+            $weight = $weight * $qty;
+            $total_weight = $total_weight + $weight;
+        }
+
+        $get_pallet_amount = $total_weight / $pallet_weight;
+        $pallet_box = intval($get_pallet_amount); //get the full box
+        $pallet_Part = $get_pallet_amount - $pallet_box; //get the part box
+
+        if($pallet_Part > 0 ){
+            $pallet_Part_weight = $pallet_Part * $pallet_weight + $pallet_box_weight;
+            $items[] = [
+                'width' => $pallet_width,
+                'length' => $pallet_length,
+                'height' => $pallet_height,
+                'weight' => $pallet_Part_weight,
+                'qty' => 1
+            ];
+        }
+
+        if($pallet_box > 0 ){
+            $pallet_Part_weight = $pallet_weight + $pallet_box_weight;
+            $items[] = [
+                'width' => $pallet_width,
+                'length' => $pallet_length,
+                'height' => $pallet_height,
+                'weight' => $pallet_Part_weight,
+                'qty' => $pallet_box
+            ];
+        }
+
+        return $items;
+    }
+
     public function display_service_options($method) {
         // Only show for MRL method with customer choice enabled
         if ($method->method_id !== 'glint_shipping') {
@@ -525,6 +514,14 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             ],
             'handUnload' => [
                 'label' => 'Hand Unload',
+                'description' => 'Required for manual unloading'
+            ],
+            'residentialPickup' => [
+                'label' => 'Residential Pickup',
+                'description' => 'Required for manual unloading'
+            ],
+            'residentialDelivery' => [
+                'label' => 'Residential Delivery',
                 'description' => 'Required for manual unloading'
             ]
         ];

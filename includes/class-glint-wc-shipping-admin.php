@@ -98,14 +98,19 @@ class Glint_WC_Shipping_Admin {
                                 <?php elseif ($method['method_name'] === 'mrl'): ?>
                                     <div class="row">
                                         <div class="method-option">
-                                            <!-- Account Name -->                                   
-                                            <label>Account Name:</label>
+                                            <!-- API Username -->                                   
+                                            <label>API Username:</label>
                                             <input type="text" name="methods[<?php echo $index; ?>][method_setting][account]" value="<?php echo esc_attr($method['method_setting']['account'] ?? ''); ?>">
                                         </div>
                                         <div class="method-option">
-                                        <!-- Password -->
+                                            <!-- Password -->
                                             <label>Password:</label>
                                             <input type="password" name="methods[<?php echo $index; ?>][method_setting][password]" value="<?php echo esc_attr($method['method_setting']['password'] ?? ''); ?>">
+                                        </div>
+                                        <div class="method-option">
+                                            <!-- Username -->
+                                            <label>Account Number:</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][accountNo]" value="<?php echo esc_attr($method['method_setting']['accountNo'] ?? ''); ?>">
                                         </div>
                                     </div>
 
@@ -134,6 +139,24 @@ class Glint_WC_Shipping_Admin {
                                             <select name="methods[<?php echo $index; ?>][method_setting][handUnload]" class="setting-select">
                                                 <option value="yes" <?php selected($method['method_setting']['handUnload'], 'yes'); ?>>Yes</option>
                                                 <option value="no" <?php selected($method['method_setting']['handUnload'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="method-option">
+                                            <!-- Residential Pickup -->
+                                            <label>Residential Pickup:</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][residentialPickup]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['residentialPickup'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['residentialPickup'], 'no'); ?>>No</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="method-option">
+                                            <!-- Residential Delivery -->
+                                            <label>Residential Delivery:</label>
+                                            <select name="methods[<?php echo $index; ?>][method_setting][residentialDelivery]" class="setting-select">
+                                                <option value="yes" <?php selected($method['method_setting']['residentialDelivery'], 'yes'); ?>>Yes</option>
+                                                <option value="no" <?php selected($method['method_setting']['residentialDelivery'], 'no'); ?>>No</option>
                                             </select>
                                         </div>
 
@@ -275,12 +298,18 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['account']) : '';
                 $sanitized['method_setting']['password'] = isset($method['method_setting']['password']) ? 
                     sanitize_text_field($method['method_setting']['password']) : '';
+                $sanitized['method_setting']['accountNo'] = isset($method['method_setting']['accountNo']) ? 
+                    sanitize_text_field($method['method_setting']['accountNo']) : '';
                 $sanitized['method_setting']['tailLiftPickup'] = isset($method['method_setting']['tailLiftPickup']) ? 
                     sanitize_text_field($method['method_setting']['tailLiftPickup']) : '';
                 $sanitized['method_setting']['tailLiftDelivery'] = isset($method['method_setting']['tailLiftDelivery']) ? 
                     sanitize_text_field($method['method_setting']['tailLiftDelivery']) : '';
                 $sanitized['method_setting']['handUnload'] = isset($method['method_setting']['handUnload']) ? 
                     sanitize_text_field($method['method_setting']['handUnload']) : '';
+                    $sanitized['method_setting']['residentialPickup'] = isset($method['method_setting']['residentialPickup']) ? 
+                    sanitize_text_field($method['method_setting']['residentialPickup']) : '';
+                    $sanitized['method_setting']['residentialDelivery'] = isset($method['method_setting']['residentialDelivery']) ? 
+                    sanitize_text_field($method['method_setting']['residentialDelivery']) : '';
                 $sanitized['method_setting']['customer_choice_enabled'] = isset($method['method_setting']['customer_choice_enabled']) ? 
                     sanitize_text_field($method['method_setting']['customer_choice_enabled']) : '';
             }
