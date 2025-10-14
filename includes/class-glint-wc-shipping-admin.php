@@ -306,9 +306,9 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['tailLiftDelivery']) : '';
                 $sanitized['method_setting']['handUnload'] = isset($method['method_setting']['handUnload']) ? 
                     sanitize_text_field($method['method_setting']['handUnload']) : '';
-                    $sanitized['method_setting']['residentialPickup'] = isset($method['method_setting']['residentialPickup']) ? 
+                $sanitized['method_setting']['residentialPickup'] = isset($method['method_setting']['residentialPickup']) ? 
                     sanitize_text_field($method['method_setting']['residentialPickup']) : '';
-                    $sanitized['method_setting']['residentialDelivery'] = isset($method['method_setting']['residentialDelivery']) ? 
+                $sanitized['method_setting']['residentialDelivery'] = isset($method['method_setting']['residentialDelivery']) ? 
                     sanitize_text_field($method['method_setting']['residentialDelivery']) : '';
                 $sanitized['method_setting']['customer_choice_enabled'] = isset($method['method_setting']['customer_choice_enabled']) ? 
                     sanitize_text_field($method['method_setting']['customer_choice_enabled']) : '';
