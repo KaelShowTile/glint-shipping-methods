@@ -93,7 +93,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             // Calculate shipping based on method type
             $cost = $this->calculate_method_cost($found_method_name, $found_method, $package);
 
-            if($cost !== false){
+            if($cost !== false && $cost !== 0){
                 // Add shipping rate
                 $rate = [
                     'id' => $this->id . '_' . $found_method['method_id'],
@@ -132,7 +132,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             $this->add_rate($rate);
             return;
         }
-
     }
 
     
