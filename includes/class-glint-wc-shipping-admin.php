@@ -168,6 +168,18 @@ class Glint_WC_Shipping_Admin {
                                                 <option value="no" <?php selected($method['method_setting']['customer_choice_enabled'], 'no'); ?>>No</option>
                                             </select>
                                         </div>
+
+                                        <div class="method-option">
+                                            <!-- Customer can select -->
+                                            <label>Extra addon Weight:</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][extra_addon_weight]"  value="<?php echo esc_attr($method['method_setting']['extra_addon_weight'] ?? 0); ?>">
+                                        </div>
+
+                                        <div class="method-option">
+                                            <!-- Customer can select -->
+                                            <label>Extra addon cost:</label>
+                                            <input type="text" name="methods[<?php echo $index; ?>][method_setting][extra_addon_cost]"   value="<?php echo esc_attr($method['method_setting']['extra_addon_cost'] ?? 0); ?>">
+                                        </div>
                                     </div>
 
                                 <?php elseif ($method['method_name'] === 'sydney_delivery'): ?>
@@ -312,6 +324,10 @@ class Glint_WC_Shipping_Admin {
                     sanitize_text_field($method['method_setting']['residentialDelivery']) : '';
                 $sanitized['method_setting']['customer_choice_enabled'] = isset($method['method_setting']['customer_choice_enabled']) ? 
                     sanitize_text_field($method['method_setting']['customer_choice_enabled']) : '';
+                $sanitized['method_setting']['extra_addon_weight'] = isset($method['method_setting']['extra_addon_weight']) ? 
+                    sanitize_text_field($method['method_setting']['extra_addon_weight']) : 0;
+                $sanitized['method_setting']['extra_addon_cost'] = isset($method['method_setting']['extra_addon_cost']) ? 
+                    sanitize_text_field($method['method_setting']['extra_addon_cost']) : 0;
             }
             elseif ($sanitized['method_name'] === 'sydney_delivery') {
                 $sanitized['method_setting']['1200kg'] = isset($method['method_setting']['1200kg']) ? 

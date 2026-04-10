@@ -159,6 +159,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'handUnload' => 'no',
             'residentialPickup' => 'no',
             'residentialDelivery' => 'no'
+            
         ];
         
         // Get from session if available
@@ -197,6 +198,8 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
         // Get service choices (customer or default)
         $customer_choice_enabled = $method['method_setting']['customer_choice_enabled'] ?? 'no';
+        $extra_weight = $method['method_setting']['extra_addon_weight'] ?? 0;
+        $extra_cost = $method['method_setting']['extra_addon_cost'] ?? 0;
         
         if ($customer_choice_enabled === 'yes') {
             $service_choices = $this->get_customer_service_choices();
@@ -226,30 +229,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $to_postcode = $destination['postcode'];
         
         // CHT way, convert items to pallet for delivery
-        $items = $this->convert_to_pallet($package);
-        
-        /* Prepare items array, default way, get items from order
-        $items = [];
-        foreach ($package['contents'] as $item) {
-            $product = $item['data'];
-            $qty = $item['quantity'];
-            
-            // Get dimensions
-            $dimensions = $this->get_product_dimensions($product);
-            $length = $this->convert_dimension_to_cm($dimensions['length'], $dimensions['dimension_unit']);
-            $width = $this->convert_dimension_to_cm($dimensions['width'], $dimensions['dimension_unit']);
-            $height = $this->convert_dimension_to_cm($dimensions['height'], $dimensions['dimension_unit']);
-            $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
-            
-            // Ensure minimum values
-            $items[] = [
-                'width' => max(1, $width),
-                'length' => max(1, $length),
-                'height' => max(1, $height),
-                'weight' => max(0.1, $weight),
-                'qty' => $qty
-            ];
-        }*/
+        $items = $this->convert_to_pallet($package,$extra_weight);
         
         // Prepare API request
         $api_url = 'https://api.sampsonexpress.com.au/v3.6/customers/1941/shipping/';
@@ -320,7 +300,8 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         foreach ($data['response'] as $quote) {
             if (isset($quote['TotalInc'])) {
                 if($quote['TotalInc'] !== 'NA'){
-                    return (float) $quote['TotalInc'];
+                    $totalPrice = (float)$quote['TotalInc'] + (float)$extra_cost;
+                    return $totalPrice ;
                 }else{
                     return 0;
                 }  
@@ -419,15 +400,16 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
 
     //cht only
-    public function convert_to_pallet($package){
+    public function convert_to_pallet($package,$extra_weight){
         $pallet_width = 120;
         $pallet_length = 120;
         $pallet_height = 85;
-        $pallet_weight = 800;
-        $pallet_box_weight = 50;
+        $pallet_weight = 800 - $extra_weight;
         $total_weight = 0;
         // output array
         $items = [];
+
+        error_log("pallet_weight: " . $pallet_weight);
 
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
@@ -451,7 +433,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $pallet_Part = $get_pallet_amount - $pallet_box; //get the part box
 
         if($pallet_Part > 0 ){
-            $pallet_Part_weight = $pallet_Part * $pallet_weight + $pallet_box_weight;
+            $pallet_Part_weight = $pallet_Part * $pallet_weight;
             $items[] = [
                 'width' => $pallet_width,
                 'length' => $pallet_length,
@@ -462,7 +444,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         }
 
         if($pallet_box > 0 ){
-            $pallet_Part_weight = $pallet_weight + $pallet_box_weight;
+            $pallet_Part_weight = $pallet_weight;
             $items[] = [
                 'width' => $pallet_width,
                 'length' => $pallet_length,

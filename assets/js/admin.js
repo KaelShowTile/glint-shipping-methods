@@ -86,6 +86,14 @@ jQuery(function($) {
                             <option value="no">No</option>
                         </select>
                     </div>
+                    <div class="method-option">
+                        <label>Extra addon weight</label>
+                        <input type="text" name="methods[${index}][method_setting][extra_addon_weight]">
+                    </div>
+                    <div class="method-option">
+                        <label>Extra addon cost</label>
+                        <input type="text" name="methods[${index}][method_setting][extra_addon_cost]">
+                    </div>
                 </div>
             `;
         }else if (method === 'sydney_delivery') {

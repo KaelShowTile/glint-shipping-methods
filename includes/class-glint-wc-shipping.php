@@ -6,7 +6,6 @@ class Glint_WC_Shipping {
         if (get_option('glint_shipping_enable', 'no') === 'yes') {
             add_filter('woocommerce_shipping_methods', [__CLASS__, 'add_shipping_method']);
             add_action('woocommerce_shipping_init', [__CLASS__, 'shipping_init']);
-
             add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_frontend_assets']);
             add_action('woocommerce_after_shipping_rate', [__CLASS__, 'display_service_options'], 10, 2);
         }
