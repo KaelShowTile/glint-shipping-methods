@@ -229,7 +229,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $to_postcode = $destination['postcode'];
         
         // CHT way, convert items to pallet for delivery
-        $items = $this->convert_to_pallet($package,$extra_weight);
+        $items = $this->convert_to_pallet($package, $extra_weight);
         
         // Prepare API request
         $api_url = 'https://api.sampsonexpress.com.au/v3.6/customers/1941/shipping/';
@@ -400,7 +400,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
 
     //cht only
-    public function convert_to_pallet($package,$extra_weight){
+    public function convert_to_pallet($package, $extra_weight){
         $pallet_width = 120;
         $pallet_length = 120;
         $pallet_height = 85;
@@ -408,8 +408,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $total_weight = 0;
         // output array
         $items = [];
-
-        error_log("pallet_weight: " . $pallet_weight);
 
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
@@ -433,7 +431,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $pallet_Part = $get_pallet_amount - $pallet_box; //get the part box
 
         if($pallet_Part > 0 ){
-            $pallet_Part_weight = $pallet_Part * $pallet_weight;
+            $pallet_Part_weight = $pallet_Part * $pallet_weight + $extra_weight;
             $items[] = [
                 'width' => $pallet_width,
                 'length' => $pallet_length,
@@ -444,7 +442,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         }
 
         if($pallet_box > 0 ){
-            $pallet_Part_weight = $pallet_weight;
+            $pallet_Part_weight = $pallet_weight + $extra_weight;
             $items[] = [
                 'width' => $pallet_width,
                 'length' => $pallet_length,
