@@ -195,7 +195,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
     private function calculate_mrl($method, $package) {
         $this->save_customer_service_choices();
-        error_log("trigger mrl calculation");
 
         // Get service choices (customer or default)
         $customer_choice_enabled = $method['method_setting']['customer_choice_enabled'] ?? 'no';
@@ -408,10 +407,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $pallet_weight = 800 - $extra_weight;
         $total_weight = 0;
         $pallet_box = 0;
-        $seperated_box = 0;
-
-        error_log("trigger pallet converstion...");
-        
         // output array
         $items = [];
 
@@ -426,10 +421,8 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             if(!$weight || $weight==0){
                 $weight = 800;
             }
-
-            error_log( "The value of seperated_pallets: " . $seperated_pallets);
             
-            if($seperated_pallets == 1){
+            if($seperated_pallets && $seperated_pallets == 1){
                 $seperated_pallet_total_weight = $weight * $qty;
                 $get_seperated_pallet_amount = $seperated_pallet_total_weight / $pallet_weight;
                 $pallet_box = $pallet_box + intval($get_seperated_pallet_amount);
@@ -446,10 +439,10 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
         $get_pallet_amount = $total_weight / $pallet_weight;
         $pallet_box = $pallet_box + intval($get_pallet_amount); //get the full box
-        $pallet_Part = $get_pallet_amount - $pallet_box; //get the part box
+        $pallet_Part = $get_pallet_amount - intval($get_pallet_amount); //get the part box percentage of box weight
 
         if($pallet_Part > 0 ){
-            $pallet_Part_weight = $pallet_Part * $pallet_weight + $extra_weight;
+            $pallet_Part_weight = $pallet_Part * $pallet_weight + $extra_weight; //get true part weight
             $items[] = [
                 'width' => $pallet_width,
                 'length' => $pallet_length,
