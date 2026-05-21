@@ -20,6 +20,15 @@ class Glint_WC_Shipping_Product {
                 'min'  => '0'
             ]
         ]);
+
+        woocommerce_wp_checkbox([
+            'id'          => 'seperated_pallets',
+            'label'       => __('Seperated Pallets', 'glint-wc-shipping'),
+            'description' => __('Check if this product requires separated pallets', 'glint-wc-shipping'),
+            'desc_tip'    => true,
+            'cbvalue'     => '1',
+            'value'       => $product_object->get_meta('seperated_pallets', true) ?: '0'
+        ]);
     }
     
     public static function save_shipping_fields($product) {
@@ -27,5 +36,8 @@ class Glint_WC_Shipping_Product {
             $value = wc_clean($_POST['unitperpallet']);
             $product->update_meta_data('unitperpallet', $value);
         }
+
+        $seperated_pallets = isset($_POST['seperated_pallets']) ? '1' : '0';
+        $product->update_meta_data('seperated_pallets', $seperated_pallets);
     }
 }

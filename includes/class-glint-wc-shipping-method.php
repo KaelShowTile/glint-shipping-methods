@@ -195,6 +195,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
 
     private function calculate_mrl($method, $package) {
         $this->save_customer_service_choices();
+        error_log("trigger mrl calculation");
 
         // Get service choices (customer or default)
         $customer_choice_enabled = $method['method_setting']['customer_choice_enabled'] ?? 'no';
@@ -406,28 +407,45 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $pallet_height = 85;
         $pallet_weight = 800 - $extra_weight;
         $total_weight = 0;
+        $pallet_box = 0;
+        $seperated_box = 0;
+
+        error_log("trigger pallet converstion...");
+        
         // output array
         $items = [];
 
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
             $qty = $item['quantity'];
+            $seperated_pallets = get_post_meta( $product->get_id(), 'seperated_pallets', true );
+
             $dimensions = $this->get_product_dimensions($product);
             $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
-
             //if forget to setup weight, use 800kg/1 pallet's weight as default
             if(!$weight || $weight==0){
                 $weight = 800;
             }
+
+            error_log( "The value of seperated_pallets: " . $seperated_pallets);
             
-            //convert into kg
-            $weight = wc_get_weight((float) $product->get_weight(), 'kg');
-            $weight = $weight * $qty;
-            $total_weight = $total_weight + $weight;
+            if($seperated_pallets == 1){
+                $seperated_pallet_total_weight = $weight * $qty;
+                $get_seperated_pallet_amount = $seperated_pallet_total_weight / $pallet_weight;
+                $pallet_box = $pallet_box + intval($get_seperated_pallet_amount);
+                if($get_seperated_pallet_amount > intval($get_seperated_pallet_amount)){
+                    $pallet_box = $pallet_box + 1;
+                }
+            }else{
+                //convert into kg
+                $weight = wc_get_weight((float) $product->get_weight(), 'kg');
+                $weight = $weight * $qty;
+                $total_weight = $total_weight + $weight;
+            }
         }
 
         $get_pallet_amount = $total_weight / $pallet_weight;
-        $pallet_box = intval($get_pallet_amount); //get the full box
+        $pallet_box = $pallet_box + intval($get_pallet_amount); //get the full box
         $pallet_Part = $get_pallet_amount - $pallet_box; //get the part box
 
         if($pallet_Part > 0 ){
