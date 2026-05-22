@@ -48,6 +48,24 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         if (empty($package['destination']['postcode'])) {
             return;
         }
+
+        // CHT Only, if there is product with "contact us" option, showing contact us message for shipping
+        if($this->check_contact_us_item($package) == true){
+            $no_shipping_method_message = "Please contact us for a quote.";
+            $rate = [
+                'id' => $this->id . '_no_shipping_service',
+                'label' => $no_shipping_method_message, 
+                //'cost' => 0, // Or you could set a special cost if needed
+                'package' => $package,
+                'meta_data' => [
+                    'no_shipping_service' => true, // Custom flag for identification
+                    'custom_label' => $no_shipping_method_message
+                ]
+            ];
+            
+            $this->add_rate($rate);
+            return;
+        }
         
         $postcode = strtoupper(str_replace(' ', '', $package['destination']['postcode']));
         $methods = Glint_WC_Shipping_DB::get_all_methods();
@@ -464,6 +482,19 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         }
 
         return $items;
+    }
+
+    //cht only
+    public function check_contact_us_item($package){
+        $ifHasItem = false;
+        foreach ($package['contents'] as $item){
+            $product = $item['data'];
+            $contact_us_value = get_post_meta( $product->get_id(), 'contact_for_price', true );
+            if($contact_us_value && $contact_us_value == 1){
+                $ifHasItem = true;
+            }
+        }
+        return $ifHasItem;
     }
 
     public function display_service_options($method) {

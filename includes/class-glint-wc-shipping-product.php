@@ -29,6 +29,15 @@ class Glint_WC_Shipping_Product {
             'cbvalue'     => '1',
             'value'       => $product_object->get_meta('seperated_pallets', true) ?: '0'
         ]);
+
+        woocommerce_wp_checkbox([
+            'id'          => 'contact_for_price',
+            'label'       => __('Contact for Price', 'glint-wc-shipping'),
+            'description' => __('Require customers to contact for price', 'glint-wc-shipping'),
+            'desc_tip'    => true,
+            'cbvalue'     => '1',
+            'value'       => $product_object->get_meta('contact_for_price', true) ?: '0'
+        ]);
     }
     
     public static function save_shipping_fields($product) {
@@ -39,5 +48,8 @@ class Glint_WC_Shipping_Product {
 
         $seperated_pallets = isset($_POST['seperated_pallets']) ? '1' : '0';
         $product->update_meta_data('seperated_pallets', $seperated_pallets);
+
+        $contact_for_price = isset($_POST['contact_for_price']) ? '1' : '0';
+        $product->update_meta_data('contact_for_price', $contact_for_price);
     }
 }
