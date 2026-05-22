@@ -49,9 +49,23 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             return;
         }
 
+        $methods = Glint_WC_Shipping_DB::get_all_methods();
+
         // CHT Only, if there is product with "contact us" option, showing contact us message for shipping
         if($this->check_contact_us_item($package) == true){
-            $no_shipping_method_message = "Please contact us for a quote.";
+            //deflaut message showing on checkout page
+            $no_shipping_method_message = "Please contact us for shipping fee of this/these product(s).";
+            //if has setup no service method
+            $no_service_method = null;
+            foreach ($methods as $method) {
+                    if ($method['method_name'] === 'no_shipping_service') {
+                    $no_service_method = $method;
+                    break;
+                }
+            }
+            if($no_service_method){
+                $no_shipping_method_message = $no_service_method['method_setting']['no_shipping_method_notice'];
+            }
             $rate = [
                 'id' => $this->id . '_no_shipping_service',
                 'label' => $no_shipping_method_message, 
@@ -68,7 +82,6 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         }
         
         $postcode = strtoupper(str_replace(' ', '', $package['destination']['postcode']));
-        $methods = Glint_WC_Shipping_DB::get_all_methods();
 
         $found_method = null;
         $found_method_name = null;
@@ -130,7 +143,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         // If no regular method found, use the no_shipping_service method
         if (!$found_method) {
             //deflaut message showing on checkout page
-            $no_shipping_method_message = "Please contact us for a quote.";
+            $no_shipping_method_message = "Please contact us for shipping fee of this/these product(s).";
             //if has setup no service method
             if($no_service_method){
                 $no_shipping_method_message = $no_service_method['method_setting']['no_shipping_method_notice'];
