@@ -1,37 +1,41 @@
 <?php
 defined('ABSPATH') || exit;
 
-class Glint_WC_Shipping_Method extends WC_Shipping_Method {
-    public function __construct($instance_id = 0) {
+class Glint_WC_Shipping_Method extends WC_Shipping_Method
+{
+    public function __construct($instance_id = 0)
+    {
         parent::__construct($instance_id);
-        
+
         $this->id = 'glint_shipping';
         $this->method_title = __('CHT Shipping', 'glint-wc-shipping');
         $this->method_description = __('Custom shipping calculation based on postcodes and methods', 'glint-wc-shipping');
-        
+
         $this->supports = [
             'shipping-zones',
             'instance-settings',
         ];
-        
+
         $this->init();
     }
-    
-    public function init() {
+
+    public function init()
+    {
         // Load form fields
         $this->init_form_fields();
-        
+
         // Load settings
         $this->init_settings();
-        
+
         // Define user settings
         $this->title = $this->get_option('title', $this->method_title);
-        
+
         // Save settings
         add_action('woocommerce_update_options_shipping_' . $this->id, [$this, 'process_admin_options']);
     }
-    
-    public function init_form_fields() {
+
+    public function init_form_fields()
+    {
         $this->form_fields = [
             'title' => [
                 'title' => __('Title', 'glint-wc-shipping'),
@@ -42,8 +46,9 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             ]
         ];
     }
-    
-    public function calculate_shipping($package = []) {
+
+    public function calculate_shipping($package = [])
+    {
         // Check if postcode exists
         if (empty($package['destination']['postcode'])) {
             return;
@@ -52,23 +57,23 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $methods = Glint_WC_Shipping_DB::get_all_methods();
 
         // CHT Only, if there is product with "contact us" option, showing contact us message for shipping
-        if($this->check_contact_us_item($package) == true){
+        if ($this->check_contact_us_item($package) == true) {
             //deflaut message showing on checkout page
             $no_shipping_method_message = "Please contact us for shipping fee of this/these product(s).";
             //if has setup no service method
             $no_service_method = null;
             foreach ($methods as $method) {
-                    if ($method['method_name'] === 'no_shipping_service') {
+                if ($method['method_name'] === 'no_shipping_service') {
                     $no_service_method = $method;
                     break;
                 }
             }
-            if($no_service_method){
+            if ($no_service_method) {
                 $no_shipping_method_message = $no_service_method['method_setting']['no_shipping_method_notice'];
             }
             $rate = [
                 'id' => $this->id . '_no_shipping_service',
-                'label' => $no_shipping_method_message, 
+                'label' => $no_shipping_method_message,
                 //'cost' => 0, // Or you could set a special cost if needed
                 'package' => $package,
                 'meta_data' => [
@@ -76,18 +81,18 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                     'custom_label' => $no_shipping_method_message
                 ]
             ];
-            
+
             $this->add_rate($rate);
             return;
         }
-        
+
         $postcode = strtoupper(str_replace(' ', '', $package['destination']['postcode']));
 
         $found_method = null;
         $found_method_name = null;
         $no_service_method = null;
         $method_rest_area = null;
-        
+
         // Find matching method by postcode
         foreach ($methods as $method) {
             // First, check if this is the no_shipping_service method
@@ -96,15 +101,15 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 $found_method_name = 'no_shipping_service';
                 continue;
             }
-            
+
             // Then check for postcode matches in regular methods
             $postcodes = array_map('trim', explode("\n", $method['postcode']));
-            
-            $normalized_postcodes = array_map(function($pc) {
+
+            $normalized_postcodes = array_map(function ($pc) {
                 return strtoupper(str_replace(' ', '', $pc));
             }, $postcodes);
-            
-            if(in_array('REST', $normalized_postcodes)){
+
+            if (in_array('REST', $normalized_postcodes)) {
                 $method_rest_area = $method;
             }
 
@@ -115,16 +120,16 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             }
         }
 
-        if(!$found_method && $method_rest_area){
+        if (!$found_method && $method_rest_area) {
             $found_method = $method_rest_area;
             $found_method_name = $method_rest_area['method_name'];
         }
 
-        if($found_method){
+        if ($found_method) {
             // Calculate shipping based on method type
             $cost = $this->calculate_method_cost($found_method_name, $found_method, $package);
 
-            if($cost !== false && $cost !== 0){
+            if ($cost !== false && $cost !== 0) {
                 // Add shipping rate
                 $rate = [
                     'id' => $this->id . '_' . $found_method['method_id'],
@@ -133,9 +138,9 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                     //'calc_tax' => 'per_item',
                     'package' => $package,
                 ];
-                
+
                 $this->add_rate($rate);
-            }else{
+            } else {
                 $found_method = null;
             }
         }
@@ -145,13 +150,13 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             //deflaut message showing on checkout page
             $no_shipping_method_message = "Please contact us for shipping fee of this/these product(s).";
             //if has setup no service method
-            if($no_service_method){
+            if ($no_service_method) {
                 $no_shipping_method_message = $no_service_method['method_setting']['no_shipping_method_notice'];
             }
 
             $rate = [
                 'id' => $this->id . '_no_shipping_service',
-                'label' => $no_shipping_method_message, 
+                'label' => $no_shipping_method_message,
                 //'cost' => 0, // Or you could set a special cost if needed
                 'package' => $package,
                 'meta_data' => [
@@ -159,40 +164,43 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                     'custom_label' => $no_shipping_method_message
                 ]
             ];
-            
+
             $this->add_rate($rate);
             return;
         }
     }
 
-    
-    private function calculate_method_cost($method_name, $method, $package) {
-        if($method_name == 'custom_formula'){
+
+    private function calculate_method_cost($method_name, $method, $package)
+    {
+        if ($method_name == 'custom_formula') {
             return $this->calculate_custom_formula($method, $package);
-        }elseif($method_name == 'mrl'){
+        } elseif ($method_name == 'mrl') {
             return $this->calculate_mrl($method, $package);
-        }elseif($method_name == 'sydney_delivery'){
+        } elseif ($method_name == 'sydney_delivery') {
             return $this->calculate_sydney_delivery($method, $package);
-        }else{
+        } else {
             return $this->no_service_available();
         }
     }
-    
-    private function calculate_custom_formula($method, $package) {
-        
+
+    private function calculate_custom_formula($method, $package)
+    {
+
         return 0; // Fallback to free shipping
     }
-    
-    private function get_customer_service_choices() {
+
+    private function get_customer_service_choices()
+    {
         $choices = [
             'tailLiftPickup' => 'no',
             'tailLiftDelivery' => 'no',
             'handUnload' => 'no',
             'residentialPickup' => 'no',
             'residentialDelivery' => 'no'
-            
+
         ];
-        
+
         // Get from session if available
         if (isset(WC()->session) && WC()->session->get('glint_mrl_services')) {
             $session_choices = WC()->session->get('glint_mrl_services');
@@ -202,17 +210,18 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 }
             }
         }
-        
+
         return $choices;
     }
 
-    private function save_customer_service_choices() {
+    private function save_customer_service_choices()
+    {
         if (!isset(WC()->session) || !isset($_POST['post_data'])) {
             return;
         }
-        
+
         parse_str($_POST['post_data'], $post_data);
-        
+
         $services = [
             'tailLiftPickup' => isset($post_data['glint_tailLiftPickup']) ? 'yes' : 'no',
             'tailLiftDelivery' => isset($post_data['glint_tailLiftDelivery']) ? 'yes' : 'no',
@@ -220,18 +229,19 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'residentialPickup' => isset($post_data['glint_residentialPickup']) ? 'yes' : 'no',
             'residentialDelivery' => isset($post_data['glint_residentialDelivery']) ? 'yes' : 'no'
         ];
-        
+
         WC()->session->set('glint_mrl_services', $services);
     }
 
-    private function calculate_mrl($method, $package) {
+    private function calculate_mrl($method, $package)
+    {
         $this->save_customer_service_choices();
 
         // Get service choices (customer or default)
         $customer_choice_enabled = $method['method_setting']['customer_choice_enabled'] ?? 'no';
         $extra_weight = $method['method_setting']['extra_addon_weight'] ?? 0;
         $extra_cost = $method['method_setting']['extra_addon_cost'] ?? 0;
-        
+
         if ($customer_choice_enabled === 'yes') {
             $service_choices = $this->get_customer_service_choices();
         } else {
@@ -248,20 +258,20 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         if (empty($package['contents'])) {
             return 0;
         }
-        
+
         // Get store address
         $store_country = WC()->countries->get_base_country();
         $store_postcode = WC()->countries->get_base_postcode();
         $store_city = WC()->countries->get_base_city();
-        
+
         // Get destination address
         $destination = $package['destination'];
         $to_suburb = $destination['city'];
         $to_postcode = $destination['postcode'];
-        
+
         // CHT way, convert items to pallet for delivery
         $items = $this->convert_to_pallet($package, $extra_weight);
-        
+
         // Prepare API request
         $api_url = 'https://api.sampsonexpress.com.au/v3.6/customers/1941/shipping/';
 
@@ -270,10 +280,12 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'Authorization' => 'Basic ' . base64_encode($method['method_setting']['account'] . ':' . $method['method_setting']['password'])
         ];
 
-        $services = [[
-            'account' => $method['method_setting']['accountNo'] ?? '',
-            'service' => 'EXPKG' 
-        ]];
+        $services = [
+            [
+                'account' => $method['method_setting']['accountNo'] ?? '',
+                'service' => 'EXPKG'
+            ]
+        ];
 
         $request_body = [
             'fromSuburb' => $store_city,
@@ -296,7 +308,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'timeout' => 15,
             'sslverify' => false
         );
-        
+
         // Make API request
         $response = wp_remote_post($api_url, $args);
 
@@ -305,13 +317,13 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             error_log('MRL API Error: ' . $response->get_error_message());
             return 0;
         }
-        
+
         $status_code = wp_remote_retrieve_response_code($response);
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
 
         //var_dump($data);
-        
+
         if ($status_code !== 200) {
             $error_message = "MRL API Error: Status $status_code";
             if (isset($data['error']['message'])) {
@@ -320,29 +332,30 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             error_log($error_message);
             return 0;
         }
-        
+
         if (!isset($data['success']) || !$data['success']) {
             $error = $data['error'] ?? ['code' => 'unknown', 'message' => 'Unknown error'];
             error_log("MRL API Error: {$error['code']} - {$error['message']}");
             return 0;
         }
-        
+
         // Find the first valid quote
         foreach ($data['response'] as $quote) {
             if (isset($quote['TotalInc'])) {
-                if($quote['TotalInc'] !== 'NA'){
-                    $totalPrice = (float)$quote['TotalInc'] + (float)$extra_cost;
-                    return $totalPrice ;
-                }else{
+                if ($quote['TotalInc'] !== 'NA') {
+                    $totalPrice = (float) $quote['TotalInc'] + (float) $extra_cost;
+                    return $totalPrice;
+                } else {
                     return 0;
-                }  
+                }
             }
         }
-        
+
         return 0;
     }
-    
-    private function calculate_sydney_delivery($method, $package) {
+
+    private function calculate_sydney_delivery($method, $package)
+    {
         $destination = $package['destination'];
         $to_postcode = $destination['postcode'];
         $total_weight = 0;
@@ -352,51 +365,61 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             $qty = $item['quantity'];
             $dimensions = $this->get_product_dimensions($product);
             $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
+            $seperated_pallets = get_post_meta($product->get_id(), 'seperated_pallets', true);
 
             //if forget to setup weight, use 1200kg as default
-            if(!$weight || $weight==0){
+            if (!$weight || $weight == 0) {
                 $weight = 1200;
             }
-            
+
             //convert into kg
             $weight = wc_get_weight((float) $product->get_weight(), 'kg');
             $weight = $weight * $qty;
+
+            //seperate pallet/large tile suitation
+            if($seperated_pallets == true){
+                $box_qty = ceil($weight/1200);
+                $weight = $weight * $box_qty;
+            }
             $total_weight = $total_weight + $weight;
         }
 
         //formula
-        if($method['method_setting']['1200kg'] && $total_weight <= 1200){
+        if ($method['method_setting']['1200kg'] && $total_weight <= 1200) {
             return $method['method_setting']['1200kg'];
-        }elseif($method['method_setting']['2400kg'] && $total_weight <= 2400){
+        } elseif ($method['method_setting']['2400kg'] && $total_weight <= 2400) {
             return $method['method_setting']['2400kg'];
-        }elseif($method['method_setting']['3600kg'] && $total_weight <= 3600){
+        } elseif ($method['method_setting']['3600kg'] && $total_weight <= 3600) {
             return $method['method_setting']['3600kg'];
-        }elseif($method['method_setting']['4800kg'] && $total_weight <= 4800){
+        } elseif ($method['method_setting']['4800kg'] && $total_weight <= 4800) {
             return $method['method_setting']['4800kg'];
-        }elseif($method['method_setting']['6000kg'] && $total_weight <= 6000){
+        } elseif ($method['method_setting']['6000kg'] && $total_weight <= 6000) {
             return $method['method_setting']['6000kg'];
-        }elseif($method['method_setting']['7200kg'] && $total_weight <= 7200){
+        } elseif ($method['method_setting']['7200kg'] && $total_weight <= 7200) {
             return $method['method_setting']['7200kg'];
-        }elseif($method['method_setting']['8400kg'] && $total_weight <= 8400){
+        } elseif ($method['method_setting']['8400kg'] && $total_weight <= 8400) {
             return $method['method_setting']['8400kg'];
-        }elseif($method['method_setting']['9600kg-12000kg'] && $total_weight <= 12000){
+        } elseif ($method['method_setting']['9600kg-12000kg'] && $total_weight <= 12000) {
             return $method['method_setting']['9600kg-12000kg'];
-        }else{
-            return false; 
+        } else {
+            return false;
         }
     }
 
-    private function no_service_available(){
+    private function no_service_available()
+    {
 
     }
 
     // Convert yes/no to Y/N
-    private function convert_yesno($value) {
+    private function convert_yesno($value)
+    {
         return strtoupper($value) === 'YES' ? 'Y' : 'N';
     }
 
     // Get product dimensions in consistent units 
-    private function get_product_dimensions($product) {
+    private function get_product_dimensions($product)
+    {
         return [
             'length' => (float) $product->get_length(),
             'width' => (float) $product->get_width(),
@@ -407,7 +430,8 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         ];
     }
 
-    private function convert_dimension_to_cm($value, $from_unit) {
+    private function convert_dimension_to_cm($value, $from_unit)
+    {
         $conversions = [
             'm' => 100,
             'cm' => 1,
@@ -415,23 +439,25 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             'in' => 2.54,
             'yd' => 91.44
         ];
-        
+
         return $value * ($conversions[$from_unit] ?? 1);
     }
 
-    private function convert_weight_to_kg($value, $from_unit) {
+    private function convert_weight_to_kg($value, $from_unit)
+    {
         $conversions = [
             'kg' => 1,
             'g' => 0.001,
             'lbs' => 0.453592,
             'oz' => 0.0283495
         ];
-        
+
         return $value * ($conversions[$from_unit] ?? 1);
     }
 
     //cht only
-    public function convert_to_pallet($package, $extra_weight){
+    public function convert_to_pallet($package, $extra_weight)
+    {
         $pallet_width = 120;
         $pallet_length = 120;
         $pallet_height = 85;
@@ -444,23 +470,23 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         foreach ($package['contents'] as $item) {
             $product = $item['data'];
             $qty = $item['quantity'];
-            $seperated_pallets = get_post_meta( $product->get_id(), 'seperated_pallets', true );
+            $seperated_pallets = get_post_meta($product->get_id(), 'seperated_pallets', true);
 
             $dimensions = $this->get_product_dimensions($product);
             $weight = $this->convert_weight_to_kg($dimensions['weight'], $dimensions['weight_unit']);
             //if forget to setup weight, use 800kg/1 pallet's weight as default
-            if(!$weight || $weight==0){
+            if (!$weight || $weight == 0) {
                 $weight = 800;
             }
-            
-            if($seperated_pallets && $seperated_pallets == 1){
+
+            if ($seperated_pallets && $seperated_pallets == 1) {
                 $seperated_pallet_total_weight = $weight * $qty;
                 $get_seperated_pallet_amount = $seperated_pallet_total_weight / $pallet_weight;
                 $pallet_box = $pallet_box + intval($get_seperated_pallet_amount);
-                if($get_seperated_pallet_amount > intval($get_seperated_pallet_amount)){
+                if ($get_seperated_pallet_amount > intval($get_seperated_pallet_amount)) {
                     $pallet_box = $pallet_box + 1;
                 }
-            }else{
+            } else {
                 //convert into kg
                 $weight = wc_get_weight((float) $product->get_weight(), 'kg');
                 $weight = $weight * $qty;
@@ -472,7 +498,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
         $pallet_box = $pallet_box + intval($get_pallet_amount); //get the full box
         $pallet_Part = $get_pallet_amount - intval($get_pallet_amount); //get the part box percentage of box weight
 
-        if($pallet_Part > 0 ){
+        if ($pallet_Part > 0) {
             $pallet_Part_weight = $pallet_Part * $pallet_weight + $extra_weight; //get true part weight
             $items[] = [
                 'width' => $pallet_width,
@@ -483,7 +509,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             ];
         }
 
-        if($pallet_box > 0 ){
+        if ($pallet_box > 0) {
             $pallet_Part_weight = $pallet_weight + $extra_weight;
             $items[] = [
                 'width' => $pallet_width,
@@ -498,45 +524,47 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
     }
 
     //cht only
-    public function check_contact_us_item($package){
+    public function check_contact_us_item($package)
+    {
         $ifHasItem = false;
-        foreach ($package['contents'] as $item){
+        foreach ($package['contents'] as $item) {
             $product = $item['data'];
-            $contact_us_value = get_post_meta( $product->get_id(), 'contact_for_price', true );
-            if($contact_us_value && $contact_us_value == 1){
+            $contact_us_value = get_post_meta($product->get_id(), 'contact_for_price', true);
+            if ($contact_us_value && $contact_us_value == 1) {
                 $ifHasItem = true;
             }
         }
         return $ifHasItem;
     }
 
-    public function display_service_options($method) {
+    public function display_service_options($method)
+    {
         // Only show for MRL method with customer choice enabled
         if ($method->method_id !== 'glint_shipping') {
             return;
         }
-        
+
         // Get method settings
         $method_id = str_replace('glint_shipping_', '', $method->get_id());
         $method_settings = Glint_WC_Shipping_DB::get_method_by_id($method_id);
-        
+
         if (!$method_settings || $method_settings['method_name'] !== 'mrl') {
             return;
         }
-        
+
         $customer_choice_enabled = $method_settings['method_setting']['customer_choice_enabled'] ?? 'no';
-        
+
         if ($customer_choice_enabled !== 'yes') {
             return;
         }
-        
+
         // Get current choices
         $current_choices = $this->get_customer_service_choices();
-        
+
         // Display service options
         echo '<div class="glint-mrl-services">';
         echo '<p>Additional Services</p>';
-        
+
         $services = [
             'tailLiftPickup' => [
                 'label' => 'Tail Lift Pickup',
@@ -559,10 +587,10 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
                 'description' => 'Required for manual unloading'
             ]
         ];
-        
+
         foreach ($services as $key => $service) {
             $checked = $current_choices[$key] === 'yes' ? 'checked' : '';
-            
+
             echo '<div class="glint-service-option">';
             echo '<div class="glint-service-label">';
             echo '<span>' . esc_html($service['label']) . '</span>';
@@ -574,7 +602,7 @@ class Glint_WC_Shipping_Method extends WC_Shipping_Method {
             echo '</label>';
             echo '</div>';
         }
-        
+
         echo '</div>';
     }
 
